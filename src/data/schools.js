@@ -1,3 +1,5 @@
+import { assessNutrition, isAnemiaEligible, VISION_RESULTS, LICE_RESULTS, HEARING_RESULTS } from './healthAssessment.js'
+
 export const healthCenters = [
   'ศูนย์บริการสาธารณสุข 4 ดินแดง',
   'ศูนย์บริการสาธารณสุข 5 จุฬาลงกรณ์',
@@ -184,8 +186,15 @@ function generateMoreSchools(count) {
 export const schools = [...featuredSchools, ...generateMoreSchools(124)]
 
 export const GRADES = ['ประถมศึกษาปีที่ 1', 'ประถมศึกษาปีที่ 2', 'ประถมศึกษาปีที่ 3', 'ประถมศึกษาปีที่ 4', 'ประถมศึกษาปีที่ 5', 'ประถมศึกษาปีที่ 6']
-const SECTIONS = ['A', 'B', 'C', 'D']
+// A-Z so section letters never wrap and repeat a grade/section label — even the
+// largest generated school (~120 rooms) only needs ~20 cycles through the 6 grades.
+const SECTIONS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 const SURVEY_DATES = ['27 สิงหาคม 2569', '26 สิงหาคม 2569', '25 สิงหาคม 2569', '20 สิงหาคม 2569']
+
+// ครูประจำชั้น name pool — shared with schoolActivities.js's TeacherAssignmentPage generator
+// so a room's homeroom teacher name is consistent wherever it's shown.
+export const TEACHER_FIRST_NAMES = ['อรทัย', 'พิชญา', 'สุภารัตน์', 'วิภาวดี', 'สุวิมล', 'อัมพร', 'วิไลพรรณ', 'ธนากร', 'ปิยะดา', 'ศิริพร', 'จิราภรณ์', 'มานพ']
+export const TEACHER_LAST_NAMES = ['ศรีสุข', 'วงศ์สวัสดิ์', 'แก้วดี', 'รุ่งเรือง', 'ไพรวัน', 'ไชยสิทธิ์', 'สุขสวัสดิ์', 'มั่นคง', 'บุญมี', 'ทองดี', 'เกษมสุข', 'พูลสวัสดิ์']
 
 const GRADE_LABELS_SUMMARY = ['ประถมศึกษาปีที่ 1', 'ประถมศึกษาปีที่ 2', 'ประถมศึกษาปีที่ 3', 'ประถมศึกษาปีที่ 4', 'ประถมศึกษาปีที่ 5', 'ประถมศึกษาปีที่ 6']
 const SUMMARY_VARIANCE = [30, 0, -30, 0, 50, -20]
@@ -203,6 +212,14 @@ export function generateGradeSummary(school) {
 
 const SECTION_VARIANCE = [10, -6, -4, 8]
 
+// Deterministic ครูประจำชั้น name for a room/section — same name lists TeacherAssignmentPage
+// uses, so a room's homeroom teacher here reads consistently across the app.
+export function roomTeacherName(seed) {
+  const firstName = TEACHER_FIRST_NAMES[seed % TEACHER_FIRST_NAMES.length]
+  const lastName = TEACHER_LAST_NAMES[(seed * 5 + 1) % TEACHER_LAST_NAMES.length]
+  return `ครู${firstName} ${lastName}`
+}
+
 // Individual classroom sections within one grade (used by the school-detail page's row expansion).
 export function generateSections(gradeRow) {
   const sectionCount = gradeRow.studentCount > 90 ? 4 : gradeRow.studentCount > 45 ? 3 : 2
@@ -212,7 +229,15 @@ export function generateSections(gradeRow) {
     name: `${gradeRow.name} / ${i + 1}`,
     surveyDate: gradeRow.surveyDate,
     studentCount: Math.max(0, base + SECTION_VARIANCE[i % SECTION_VARIANCE.length]),
+    teacherName: roomTeacherName(Number(gradeRow.code) + i),
   }))
+}
+
+// Every classroom section across all 6 grades, flattened — same rooms generateSchoolRoster()
+// groups students into, so a room picked here matches a roster row's `sectionName` exactly
+// (used by ActivityLogModal so a logged "ชั้นเรียน / ห้อง" can filter the checkup roster).
+export function generateAllSections(school) {
+  return generateGradeSummary(school).flatMap((grade) => generateSections(grade))
 }
 
 const BOY_FIRST_NAMES = ['ไพศรี', 'ธนกฤต', 'ณัฐพล', 'ปัณณวิชญ์', 'กันตพงศ์', 'ชยพล', 'ธีรภัทร', 'พีรวิชญ์', 'ศุภกร', 'อนุชา', 'ภูริช', 'วรเมธ']
@@ -296,11 +321,12 @@ const KNOWN_PENDING_CODES = new Set(['1258', '1255'])
 
 // Per-school completion status for the "ประวัติการให้บริการ" history page.
 // Deterministic and tab-independent (same schools show as pending in both service kinds).
+const SERVICE_DONE_LABELS = { vaccine: 'ฉีดเสร็จแล้ว', development: 'ประเมินแล้ว', mental: 'ประเมินแล้ว' }
 export function generateServiceStatus(school, kind) {
   const codeNum = Number(school.code) || 0
   const pending = KNOWN_PENDING_CODES.has(school.code) || (codeNum < 1254 && codeNum % 5 === 3)
   if (pending) return { label: 'รอดำเนินการ', tone: 'orange' }
-  return kind === 'vaccine' ? { label: 'ฉีดเสร็จแล้ว', tone: 'green' } : { label: 'ตรวจแล้ว', tone: 'green' }
+  return { label: SERVICE_DONE_LABELS[kind] || 'ตรวจแล้ว', tone: 'green' }
 }
 
 // Flat, school-wide student roster (all grades/sections) for the health-checkup page,
@@ -549,19 +575,160 @@ export function generateAppointments(student) {
   return APPOINTMENT_DEFS.map((a) => ({ ...a, examiner: a.status === 'done' ? examiner : null }))
 }
 
+function checkupDateTimeLabel(seed, i) {
+  const day = ((seed + i * 7) % 27) + 1
+  const month = THAI_MONTHS_FULL[(seed + i * 3) % 12]
+  const hour = String(8 + ((seed + i) % 4)).padStart(2, '0')
+  const minute = String((seed * 7 + i * 13) % 60).padStart(2, '0')
+  return `${day} ${month} ${2568 - i}  เวลา ${hour}:${minute}`
+}
+
+// Deterministic mock "ตรวจสุขภาพนักเรียน" history (2 past visits, newest first) for the
+// student-profile "ตรวจสุขภาพทั่วไป" tab's ประวัติการตรวจที่บันทึกแล้ว list — self-contained
+// like GrowthChartTab/VaccineHistoryTab's generators (no shared/global state with the
+// school/daycare batch-entry checkup pages).
+export function generateCheckupHistory(student) {
+  const seed = student.seatNo
+  const ageYears = 6 + (seed % 12)
+  const gradeName = GRADES[seed % GRADES.length]
+  const anemiaEligible = isAnemiaEligible({ gradeName, gender: student.gender })
+  return [0, 1].map((i) => {
+    const weightKg = 16 + (seed % 30) - i * 2
+    const heightCm = 105 + (seed % 55) - i * 3
+    const nutrition = assessNutrition({ weightKg, heightCm, ageYears: Math.max(ageYears - i, 5) })
+    return {
+      id: `${student.id || seed}-checkup-${i}`,
+      recordedDateLabel: checkupDateTimeLabel(seed, i),
+      gradeName,
+      ageYears,
+      weightKg,
+      heightCm,
+      nutrition,
+      vision: VISION_RESULTS[(seed + i) % VISION_RESULTS.length],
+      lice: LICE_RESULTS[(seed + i) % LICE_RESULTS.length],
+      hearing: HEARING_RESULTS[(seed + i) % HEARING_RESULTS.length],
+      obesityAcanthosis: false,
+      obesitySnoring: false,
+      anemiaEligible,
+      anemiaResult: anemiaEligible ? ((seed + i) % 5 === 0 ? 'ซีด' : 'ปกติ') : null,
+    }
+  })
+}
+
+// Deterministic mock "ตรวจทันตกรรม" history (2 past visits, newest first) for the
+// student-profile "ตรวจทันตกรรม" tab (คทง5 ครั้งที่ 3 หน้า 4) — self-contained like
+// generateCheckupHistory above.
+export function generateDentalHistory(student) {
+  const seed = student.seatNo
+  return [0, 1].map((i) => {
+    const s = seed + i * 11
+    return {
+      id: `${student.id || seed}-dental-${i}`,
+      recordedDateLabel: checkupDateTimeLabel(seed, i),
+      // บันทึกการให้บริการทันตกรรม
+      dentalEducation: s % 3 !== 0,
+      checkupAdvice: s % 4 !== 0,
+      brushingTrained: s % 2 === 0,
+      fluorideCoating: s % 5 === 0,
+      pitFissureSealant: s % 6 === 0,
+      pitFissureSealantTeeth: s % 6 === 0 ? 1 + (s % 4) : 0,
+      filling: s % 9 === 0,
+      extraction: s % 11 === 0,
+      scaling: s % 7 === 0,
+      // บันทึกการตรวจฟัน
+      decayedTeeth: s % 4,
+      missingTeeth: s % 3,
+      filledTeeth: s % 2,
+      decayedBabyTeeth: s % 5,
+      gingivitis: s % 6 === 0,
+      calculus: s % 8 === 0,
+    }
+  })
+}
+
+// ผลการประเมิน DSPM ตามที่ระบุในเอกสาร — เอกสารกล่าวถึง "ผลการประเมิน" เป็นภาพรวมค่าเดียว
+// (ปกติ/สงสัยล่าช้า/ล่าช้า) ไม่ได้ระบุรายละเอียดแบ่งตามด้านพัฒนาการ จึงไม่ใส่รายละเอียดที่ไม่มี
+// อ้างอิงในเอกสาร
+export const DEVELOPMENT_RESULTS = ['ปกติ', 'สงสัยล่าช้า', 'ล่าช้า']
+
+// Deterministic mock "การตรวจพัฒนาการ" (DSPM) history (2 past visits, newest first) for the
+// student-profile tab (คทง5 ครั้งที่ 3 หน้า 5, ครั้งที่ 4 หน้า 4-5) — เฉพาะเด็กปฐมวัย, ประเมิน
+// 2 ครั้ง (ครั้งที่ 2 เฉพาะกรณีสงสัยล่าช้า) — self-contained like generateCheckupHistory above.
+export function generateDevelopmentHistory(student) {
+  const seed = student.seatNo
+  return [0, 1].map((i) => {
+    const s = seed + i * 9
+    const result = DEVELOPMENT_RESULTS[s % 20 < 16 ? 0 : (s % 3 === 0 ? 2 : 1)]
+    return {
+      id: `${student.id || seed}-development-${i}`,
+      recordedDateLabel: checkupDateTimeLabel(seed, i),
+      round: 1,
+      result,
+      referral: result === 'ล่าช้า' ? (s % 2 === 0 ? 'คลินิกกระตุ้นพัฒนาการ' : 'งานสุขภาพจิต') : '',
+    }
+  })
+}
+
+export const MENTAL_SCREEN_RESULTS = ['ปกติ', 'กลุ่มเสี่ยง']
+export const MENTAL_4_DISORDERS = [
+  { key: 'id', label: 'ภาวะบกพร่องทางสติปัญญา (ID)' },
+  { key: 'autistic', label: 'ออทิสติก (Autistic)' },
+  { key: 'adhd', label: 'สมาธิสั้น (ADHD)' },
+  { key: 'ld', label: 'ภาวะบกพร่องทางการเรียนรู้ (LD)' },
+]
+export const MENTAL_CARE_LEVELS = ['ให้คำแนะนำ', 'รับฟังพฤติกรรม', 'ส่งต่อคลินิกสุขภาพจิต', 'ส่งต่อตามสิทธิการรักษา']
+
+export function isMentalScreeningRisk({ screen9SPlus, screenSDQ }) {
+  return screen9SPlus === 'กลุ่มเสี่ยง' || screenSDQ === 'กลุ่มเสี่ยง'
+}
+
+// CDI ใช้กับอายุ 10-14 ปี, PHQ-A ใช้กับอายุ 11-20 ปี — ช่วงอายุ 11-14 ปีทับซ้อนกัน จึงเลือก
+// เครื่องมือสำหรับเด็กเล็กกว่า (CDI) ก่อนเมื่ออายุ <=14, มิฉะนั้นใช้ PHQ-A
+export function depressionToolForAge(ageYears) {
+  return ageYears <= 14 ? 'CDI (อายุ 10-14 ปี)' : 'PHQ-A (อายุ 11-20 ปี)'
+}
+
+// Deterministic mock "สุขภาพจิต" history (2 past visits, newest first) for the student-profile
+// tab (คทง5 ครั้งที่ 3 หน้า 5, ครั้งที่ 4 หน้า 5) — คัดกรอง 9S Plus/SDQ ก่อน ถ้าเข้ากลุ่มเสี่ยงจึง
+// ประเมิน 4 โรคหลักและภาวะซึมเศร้าต่อ — self-contained like generateCheckupHistory above.
+export function generateMentalHealthHistory(student) {
+  const seed = student.seatNo
+  const ageYears = 6 + (seed % 12)
+  return [0, 1].map((i) => {
+    const s = seed + i * 13
+    const screen9SPlus = MENTAL_SCREEN_RESULTS[s % 5 === 0 ? 1 : 0]
+    const screenSDQ = MENTAL_SCREEN_RESULTS[s % 7 === 0 ? 1 : 0]
+    const risk = isMentalScreeningRisk({ screen9SPlus, screenSDQ })
+    return {
+      id: `${student.id || seed}-mental-${i}`,
+      recordedDateLabel: checkupDateTimeLabel(seed, i),
+      ageYears,
+      screen9SPlus,
+      screenSDQ,
+      disorders: risk ? { id: false, autistic: false, adhd: s % 2 === 0, ld: false } : { id: false, autistic: false, adhd: false, ld: false },
+      depressionResult: risk ? (s % 3 === 0 ? 'มีแนวโน้มซึมเศร้า' : 'ปกติ') : '',
+      careLevel: risk ? MENTAL_CARE_LEVELS[s % MENTAL_CARE_LEVELS.length] : '',
+      followUp: risk && s % 2 === 0,
+    }
+  })
+}
+
 // Deterministic mock room roster sized to roughly match each school's studentCount (~30/room).
 export function generateRooms(school) {
   const roomCount = Math.max(6, Math.round(school.studentCount / 30))
   const rooms = []
   for (let i = 0; i < roomCount; i += 1) {
     const grade = GRADES[i % GRADES.length]
-    const section = SECTIONS[Math.floor(i / GRADES.length) % SECTIONS.length]
-    const label = roomCount > GRADES.length ? `${grade}/${section}` : grade
+    const cycle = Math.floor(i / GRADES.length)
+    // Only disambiguate with a section letter once a room repeats a grade from an
+    // earlier full pass — the first pass through all 6 grades never needs one.
+    const label = cycle > 0 ? `${grade}/${SECTIONS[cycle % SECTIONS.length]}` : grade
     rooms.push({
       code: String(i + 1).padStart(4, '0'),
       name: label,
       surveyDate: SURVEY_DATES[i % SURVEY_DATES.length],
       studentCount: 25 + ((i * 7) % 21), // 25-45, deterministic spread
+      teacherName: roomTeacherName(i),
     })
   }
   return rooms

@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
-  IconChart, IconGraduationCap, IconClock, IconHeart, IconFileText, IconUsers,
+  IconChart, IconSchool, IconClock, IconHeart, IconFileText, IconUsers,
   IconBell, IconSwap, IconChevronRight, IconChevronDown, IconChevronUp,
 } from './icons.jsx'
 
 const NAV = [
   { key: 'dashboard', label: 'แดชบอร์ด', icon: IconChart },
-  { key: 'schools', label: 'สถานศึกษา', icon: IconGraduationCap },
+  { key: 'schools', label: 'สถานศึกษา', icon: IconSchool },
   { key: 'daycare', label: 'สถานรับเลี้ยงเด็กกลางวัน', icon: IconClock },
   { key: 'services', label: 'บริการ', icon: IconHeart },
   { key: 'reports', label: 'รายงาน', icon: IconFileText },
@@ -17,9 +17,11 @@ const SUBMENUS = {
   schools: {
     label: 'สถานศึกษา',
     items: [
-      { key: 'student-info', label: 'ข้อมูลนักเรียน' },
+      { key: 'student-info', label: 'สถานศึกษา' },
       { key: 'student-checkup', label: 'ตรวจสุขภาพนักเรียน' },
       { key: 'school-service-history', label: 'ประวัติการให้บริการ' },
+      { key: 'homeroom-teacher', label: 'ครูประจำชั้น' },
+      { key: 'activity-log', label: 'บันทึกกิจกรรม' },
       { key: 'grade-promotion', label: 'การเลื่อนชั้น' },
     ],
   },
@@ -61,14 +63,6 @@ export default function Sidebar({ active, activeSubmenu, onNavigate, showToast }
 
   const notReady = () => showToast?.('ฟีเจอร์นี้ยังไม่พร้อมใช้งาน')
 
-  // Whenever the active page belongs to a submenu section, keep that section's
-  // flyout open with the matching item selected — instead of collapsing after navigation.
-  useEffect(() => {
-    if (!activeSubmenu) return
-    const parentKey = Object.keys(SUBMENUS).find((k) => SUBMENUS[k].items.some((it) => it.key === activeSubmenu))
-    if (parentKey) setOpenSubmenu(parentKey)
-  }, [activeSubmenu])
-
   const handleNavClick = (item) => {
     if (SUBMENUS[item.key]) {
       setOpenSubmenu((cur) => (cur === item.key ? null : item.key))
@@ -87,6 +81,7 @@ export default function Sidebar({ active, activeSubmenu, onNavigate, showToast }
   }
 
   const handleSubmenuClick = (item) => {
+    setOpenSubmenu(null)
     if (item.key === 'student-info') {
       onNavigate('schools')
       return
@@ -101,6 +96,14 @@ export default function Sidebar({ active, activeSubmenu, onNavigate, showToast }
     }
     if (item.key === 'grade-promotion') {
       onNavigate('grade-promotion')
+      return
+    }
+    if (item.key === 'homeroom-teacher') {
+      onNavigate('homeroom-teacher')
+      return
+    }
+    if (item.key === 'activity-log') {
+      onNavigate('activity-log')
       return
     }
     if (item.key === 'daycare-home') {
@@ -152,19 +155,24 @@ export default function Sidebar({ active, activeSubmenu, onNavigate, showToast }
         </div>
 
         <nav className="sm-scroll">
-          {NAV.map((item) => (
+          {NAV.map((item) => {
+            // Only one item is ever highlighted: whichever submenu is currently open
+            // takes priority, otherwise fall back to the page the user is actually on.
+            const isHighlighted = openSubmenu ? openSubmenu === item.key : active === item.key
+            return (
             <button
               key={item.key}
-              className={`sm-item${active === item.key ? ' active' : ''}${openSubmenu === item.key ? ' active' : ''}`}
+              className={`sm-item${isHighlighted ? ' active' : ''}`}
               onClick={() => handleNavClick(item)}
             >
               <item.icon size={18} />
               <span className="sm-item-label">{item.label}</span>
-              {SUBMENUS[item.key] && (
-                <span className="sm-item-chevron"><IconChevronRight size={15} /></span>
+              {SUBMENUS[item.key] && isHighlighted && (
+                <span className="sm-item-chevron"><IconChevronRight size={20} /></span>
               )}
             </button>
-          ))}
+            )
+          })}
         </nav>
 
         <div className="sm-foot">

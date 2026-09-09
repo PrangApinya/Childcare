@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
-import { IconSearch, IconChevronDown, IconUpload, IconGridView, IconListView } from '../components/icons.jsx'
+import { IconSearch, IconChevronDown, IconUpload, IconGridView, IconListView, IconFileText, IconSyringe } from '../components/icons.jsx'
 import HealthCheckupTable from '../components/schools/HealthCheckupTable.jsx'
+import TabBar from '../components/TabBar.jsx'
 import Pagination from '../components/Pagination.jsx'
 import { districts, subdistricts } from '../data/schools.js'
 
@@ -8,8 +9,40 @@ const PAGE_SIZE = 20
 const YEARS = ['2569', '2568', '2567']
 const DATE_FILTERS = ['วันนี้', '7 วันที่ผ่านมา', '30 วันที่ผ่านมา', 'ทั้งหมด']
 const SORTS = ['ล่าสุด', 'เก่าสุด', 'ชื่อ A-Z']
+// เฉพาะกิจกรรมที่มีหน้าบันทึกผลแบบกลุ่ม (ตามห้อง) รองรับอยู่แล้ว — ตรวจฟัน/ตรวจพัฒนาการ/สุขภาพจิต
+// ที่บันทึกในหน้าบันทึกกิจกรรมยังไม่มีหน้าบันทึกผลแบบกลุ่มของตัวเอง (มีแค่ในโปรไฟล์รายคน)
+const TABS = [
+  { key: 'checkup', label: 'ตรวจสุขภาพ', icon: IconFileText, activity: 'ตรวจสุขภาพ' },
+  { key: 'vaccine', label: 'ฉีดวัคซีน', icon: IconSyringe, activity: 'ฉีดวัคซีน' },
+]
 
-export default function HealthCheckupBrowserPage({ schools, showToast, onOpenCheckup }) {
+const THAI_MONTHS_FULL = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม']
+function todayCheckupDate() {
+  const d = new Date()
+  const iso = d.toISOString().slice(0, 10)
+  const label = `${d.getDate()} ${THAI_MONTHS_FULL[d.getMonth()]} ${d.getFullYear() + 543}`
+  return { iso, label }
+}
+
+// ผูกวันที่ตรวจของแต่ละโรงเรียนเข้ากับบันทึกล่าสุด "เฉพาะกิจกรรมของแท็บที่เลือกอยู่" ในหน้า
+// "บันทึกกิจกรรม" — ถ้ายังไม่เคยมีการบันทึกกิจกรรมประเภทนี้ให้โรงเรียนนั้น ใช้วันนี้เป็นค่าเริ่มต้น
+function withCheckupDate(schools, activityLogs, activityType) {
+  const today = todayCheckupDate()
+  return schools.map((s) => {
+    const matches = activityLogs.filter((l) => l.schoolId === s.id && l.activity === activityType)
+    const latest = matches.reduce((best, l) => (!best || l.dateIso > best.dateIso ? l : best), null)
+    return {
+      ...s,
+      checkupDateIso: latest ? latest.dateIso : today.iso,
+      checkupDateLabel: latest ? latest.dateLabel : today.label,
+      checkupRoomNames: latest ? latest.roomNames : null,
+      checkupActivity: activityType,
+    }
+  })
+}
+
+export default function HealthCheckupBrowserPage({ schools, activityLogs, showToast, onOpenCheckup }) {
+  const [activeTab, setActiveTab] = useState('checkup')
   const [search, setSearch] = useState('')
   const [district, setDistrict] = useState('ทั้งหมด')
   const [subdistrict, setSubdistrict] = useState('ทั้งหมด')
@@ -21,18 +54,24 @@ export default function HealthCheckupBrowserPage({ schools, showToast, onOpenChe
 
   const noFilters = search === '' && district === 'ทั้งหมด' && subdistrict === 'ทั้งหมด'
 
+  const activeActivity = TABS.find((t) => t.key === activeTab)?.activity ?? TABS[0].activity
+  const schoolsWithCheckupDate = useMemo(
+    () => withCheckupDate(schools, activityLogs, activeActivity),
+    [schools, activityLogs, activeActivity]
+  )
+
   const filtered = useMemo(() => {
-    let list = schools.filter((s) => (
+    let list = schoolsWithCheckupDate.filter((s) => (
       (district === 'ทั้งหมด' || s.district === district)
       && (subdistrict === 'ทั้งหมด' || s.subdistrict === subdistrict)
       && (search.trim() === '' || `${s.name} ${s.code}`.toLowerCase().includes(search.trim().toLowerCase()))
     ))
     list = [...list]
-    if (sortBy === 'ล่าสุด') list.sort((a, b) => b.lastSurvey.localeCompare(a.lastSurvey))
-    else if (sortBy === 'เก่าสุด') list.sort((a, b) => a.lastSurvey.localeCompare(b.lastSurvey))
+    if (sortBy === 'ล่าสุด') list.sort((a, b) => b.checkupDateIso.localeCompare(a.checkupDateIso))
+    else if (sortBy === 'เก่าสุด') list.sort((a, b) => a.checkupDateIso.localeCompare(b.checkupDateIso))
     else list.sort((a, b) => a.name.localeCompare(b.name, 'th'))
     return list
-  }, [schools, search, district, subdistrict, sortBy])
+  }, [schoolsWithCheckupDate, search, district, subdistrict, sortBy])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const pageSchools = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -44,14 +83,19 @@ export default function HealthCheckupBrowserPage({ schools, showToast, onOpenChe
     setPage(1)
   }
 
+  function handleTabChange(key) {
+    setActiveTab(key)
+    setPage(1)
+  }
+
   function handleExport() {
-    const header = 'รหัสโรงเรียน,ชื่อโรงเรียน,วันที่สำรวจ,จำนวนนักเรียน\n'
-    const body = filtered.map((s) => `${s.code},${s.name},${s.lastSurveyLabel},${s.studentCount}`).join('\n')
+    const header = 'รหัสโรงเรียน,ชื่อโรงเรียน,วันที่ตรวจ,กิจกรรมที่จะทำ,จำนวนนักเรียน\n'
+    const body = filtered.map((s) => `${s.code},${s.name},${s.checkupDateLabel},${s.checkupActivity},${s.studentCount}`).join('\n')
     const blob = new Blob([`﻿${header}${body}`], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'ตรวจสุขภาพนักเรียน.csv'
+    a.download = `ตรวจสุขภาพนักเรียน-${activeActivity}.csv`
     document.body.appendChild(a)
     a.click()
     a.remove()
@@ -68,7 +112,9 @@ export default function HealthCheckupBrowserPage({ schools, showToast, onOpenChe
     <section className="panel" style={{ paddingTop: 0 }}>
       <h1 className="page-title">ตรวจสุขภาพนักเรียน</h1>
 
-      <div className="toolbar-card">
+      <TabBar tabs={TABS} active={activeTab} onChange={handleTabChange} />
+
+      <div className="toolbar-card" style={{ marginTop: 20 }}>
         <div className="search-input-wrap" style={{ maxWidth: 890, margin: '0 auto 20px' }}>
           <IconSearch size={20} />
           <input

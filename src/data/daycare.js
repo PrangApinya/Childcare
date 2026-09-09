@@ -81,11 +81,12 @@ export function generateDaycareCheckupRoster(room) {
 }
 
 // Deterministic per-room completion status for the "ประวัติการให้บริการ" history page.
+const DAYCARE_SERVICE_DONE_LABELS = { vaccine: 'ฉีดเสร็จแล้ว', development: 'ประเมินแล้ว', mental: 'ประเมินแล้ว' }
 export function generateDaycareServiceStatus(room, kind) {
   const codeNum = Number(room.code) || 0
   const pending = codeNum % 2 === 0
   if (pending) return { label: 'รอดำเนินการ', tone: 'orange' }
-  return kind === 'vaccine' ? { label: 'ฉีดเสร็จแล้ว', tone: 'green' } : { label: 'ตรวจแล้ว', tone: 'green' }
+  return { label: DAYCARE_SERVICE_DONE_LABELS[kind] || 'ตรวจแล้ว', tone: 'green' }
 }
 
 const SERVICE_DONE_PCT = 70

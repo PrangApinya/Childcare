@@ -1,22 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   IconArrowLeft, IconSearch, IconChevronDown, IconPlus, IconUpload, IconGridView, IconListView,
-  IconClipboardCheck, IconFileText, IconEye,
+  IconClipboardCheck,
 } from '../components/icons.jsx'
-import TabBar from '../components/TabBar.jsx'
 import Pagination from '../components/Pagination.jsx'
 import SuccessModal from '../components/SuccessModal.jsx'
 import StudentFormPage from './StudentFormPage.jsx'
-import { generateSchoolRoster, generateHealthCheckupSummary } from '../data/schools.js'
+import CheckupFindingsModal from '../components/health/CheckupFindingsModal.jsx'
+import { generateSchoolRoster } from '../data/schools.js'
+import { assessNutrition, estimateAgeYears } from '../data/healthAssessment.js'
 
 const PAGE_SIZE = 20
 const SORTS = ['เรียงตามเลขที่', 'ชื่อ ก-ฮ', 'เลขประจำตัว']
 const STATUS_FILTERS = ['เรียนอยู่', 'ลาออก']
-const TABS = [
-  { key: 'pending', label: 'ยังไม่ตรวจ', icon: IconPlus },
-  { key: 'done', label: 'ตรวจแล้ว', icon: IconFileText },
-]
-const BADGE_CLASS = { green: 'badge-green', orange: 'badge-orange', red: 'badge-red', grey: 'badge-grey' }
 
 const THAI_MONTHS_ABBR = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
 function todayThaiLabel() {
@@ -51,10 +47,21 @@ export default function HealthCheckupDetailPage({ school, onBack, showToast, onS
   const draftKey = draftKeyFor(school)
   const draft = useRef(loadDraft(draftKey))
 
-  const [roster, setRoster] = useState(() => generateSchoolRoster(school))
-  const summary = useMemo(() => generateHealthCheckupSummary(school), [school])
+  // เมื่อโรงเรียนนี้ถูกบันทึกกิจกรรม "ตรวจสุขภาพ" ไว้ในหน้าบันทึกกิจกรรม ให้แสดงเฉพาะนักเรียนใน
+  // ชั้นเรียน/ห้องที่ระบุไว้ (ซิงค์กับหน้าบันทึกกิจกรรม) — ถ้ายังไม่มีการบันทึกไว้ ให้แสดงทั้งโรงเรียน
+  const [roster, setRoster] = useState(() => {
+    const full = generateSchoolRoster(school)
+    return school.checkupRoomNames?.length
+      ? full.filter((s) => school.checkupRoomNames.includes(s.sectionName))
+      : full
+  })
+  const summary = useMemo(() => {
+    const total = roster.length
+    const female = roster.filter((s) => s.gender === 'หญิง').length
+    const checked = roster.filter((s) => s.checked).length
+    return { total, female, male: total - female, checked, notChecked: total - checked }
+  }, [roster])
 
-  const [activeTab, setActiveTab] = useState('pending')
   const [search, setSearch] = useState('')
   const [gradeFilter, setGradeFilter] = useState('ทั้งหมด')
   const [sectionFilter, setSectionFilter] = useState('ทั้งหมด')
@@ -66,6 +73,7 @@ export default function HealthCheckupDetailPage({ school, onBack, showToast, onS
   const [lastSavedAt, setLastSavedAt] = useState(draft.current?.lastSavedAt ?? null)
   const [showSuccess, setShowSuccess] = useState(false)
   const [subScreen, setSubScreen] = useState(null)
+  const [findingsFor, setFindingsFor] = useState(null)
   const [, forceTick] = useState(0)
 
   const gradeOptions = useMemo(() => [...new Set(roster.map((s) => s.gradeName))], [roster])
@@ -75,8 +83,7 @@ export default function HealthCheckupDetailPage({ school, onBack, showToast, onS
 
   const filtered = useMemo(() => {
     let list = roster.filter((s) => (
-      (activeTab === 'pending' ? !s.checked : s.checked)
-      && (gradeFilter === 'ทั้งหมด' || s.gradeName === gradeFilter)
+      (gradeFilter === 'ทั้งหมด' || s.gradeName === gradeFilter)
       && (sectionFilter === 'ทั้งหมด' || s.sectionName === sectionFilter)
       && (statusFilter === 'ทั้งหมด' || s.enrollStatus.label === statusFilter)
       && (search.trim() === '' || `${s.fullName} ${s.citizenId}`.toLowerCase().includes(search.trim().toLowerCase()))
@@ -85,9 +92,9 @@ export default function HealthCheckupDetailPage({ school, onBack, showToast, onS
     if (sortBy === 'ชื่อ ก-ฮ') list.sort((a, b) => a.fullName.localeCompare(b.fullName, 'th'))
     else if (sortBy === 'เลขประจำตัว') list.sort((a, b) => a.citizenId.localeCompare(b.citizenId))
     return list
-  }, [roster, activeTab, gradeFilter, sectionFilter, statusFilter, search, sortBy])
+  }, [roster, gradeFilter, sectionFilter, statusFilter, search, sortBy])
 
-  useEffect(() => { setPage(1) }, [activeTab, search, gradeFilter, sectionFilter, statusFilter, sortBy])
+  useEffect(() => { setPage(1) }, [search, gradeFilter, sectionFilter, statusFilter, sortBy])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const pageStudents = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -114,17 +121,23 @@ export default function HealthCheckupDetailPage({ school, onBack, showToast, onS
     setEntries((cur) => ({ ...cur, [id]: { ...cur[id], [field]: value } }))
   }
 
+  function setEntryBulk(id, patch) {
+    setEntries((cur) => ({ ...cur, [id]: { ...cur[id], ...patch } }))
+  }
+
   function handleViewMode(mode) {
     if (mode === 'card') { showToast('ฟีเจอร์นี้ยังไม่พร้อมใช้งาน'); return }
     setViewMode(mode)
   }
 
   function handleExport() {
-    const header = 'เลขที่,ชั้นเรียน,ห้องเรียน,เลขที่บัตรประชาชน,ชื่อ-สกุล,น้ำหนัก,ส่วนสูง\n'
+    const header = 'เลขที่,ชั้นเรียน,ห้องเรียน,เลขที่บัตรประชาชน,ชื่อ-สกุล,น้ำหนัก,ส่วนสูง,ภาวะโภชนาการ,สายตา,เหา,การได้ยิน\n'
     const body = filtered.map((s) => {
-      const w = activeTab === 'done' ? s.weight : (entries[s.id]?.weight ?? '')
-      const h = activeTab === 'done' ? s.height : (entries[s.id]?.height ?? '')
-      return `${s.seatNo},${s.gradeName},${s.sectionName},${s.citizenId},${s.fullName},${w},${h}`
+      const w = entries[s.id]?.weight ?? s.weight ?? ''
+      const h = entries[s.id]?.height ?? s.height ?? ''
+      const f = entries[s.id] ?? s.findings
+      const n = w && h ? assessNutrition({ weightKg: Number(w), heightCm: Number(h), ageYears: estimateAgeYears(s.gradeName) }) : null
+      return `${s.seatNo},${s.gradeName},${s.sectionName},${s.citizenId},${s.fullName},${w},${h},${n?.weightForHeight ?? ''},${f?.vision ?? ''},${f?.lice ?? ''},${f?.hearing ?? ''}`
     }).join('\n')
     const blob = new Blob([`﻿${header}${body}`], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
@@ -148,7 +161,13 @@ export default function HealthCheckupDetailPage({ school, onBack, showToast, onS
       showToast('กรุณากรอกน้ำหนักและส่วนสูงอย่างน้อย 1 รายการ')
       return
     }
-    setRoster((list) => list.map((s) => (doneIds.has(s.id) ? { ...s, checked: true, weight: Number(entries[s.id].weight), height: Number(entries[s.id].height) } : s)))
+    setRoster((list) => list.map((s) => (doneIds.has(s.id) ? {
+      ...s,
+      checked: true,
+      weight: Number(entries[s.id].weight),
+      height: Number(entries[s.id].height),
+      findings: entries[s.id],
+    } : s)))
     setEntries((cur) => {
       const next = { ...cur }
       doneIds.forEach((id) => delete next[id])
@@ -189,6 +208,11 @@ export default function HealthCheckupDetailPage({ school, onBack, showToast, onS
         <button className="btn btn-outline btn-sm" onClick={onBack}><IconArrowLeft size={16} />กลับ</button>
         <h1>{school.name}</h1>
       </div>
+      {school.checkupRoomNames?.length > 0 && (
+        <div style={{ padding: '0 4px 12px', fontSize: 13, color: 'var(--text-tertiary)' }}>
+          แสดงเฉพาะห้องที่บันทึกไว้ในหน้าบันทึกกิจกรรม: {school.checkupRoomNames.join(', ')}
+        </div>
+      )}
 
       <div className="checkup-summary-row">
         <div className="checkup-summary-card">
@@ -212,8 +236,6 @@ export default function HealthCheckupDetailPage({ school, onBack, showToast, onS
           <div><div className="checkup-summary-n">{summary.notChecked.toLocaleString('th-TH')}</div><div className="checkup-summary-l">ยังไม่ตรวจ</div></div>
         </div>
       </div>
-
-      <TabBar tabs={TABS} active={activeTab} onChange={setActiveTab} />
 
       <div className="toolbar-card" style={{ marginTop: 20 }}>
         <div className="search-input-wrap" style={{ maxWidth: 890, margin: '0 auto 20px' }}>
@@ -259,68 +281,48 @@ export default function HealthCheckupDetailPage({ school, onBack, showToast, onS
           <>
             <div className="tbl-wrap">
               <table className="tbl">
-                {activeTab === 'pending' ? (
-                  <thead>
-                    <tr>
-                      <th>เลขที่</th>
-                      <th>ชั้นเรียน</th>
-                      <th>ห้องเรียน</th>
-                      <th>เลขที่บัตรประชาชน</th>
-                      <th>ชื่อ-สกุล</th>
-                      <th>น้ำหนัก (ก.ก.)</th>
-                      <th>ส่วนสูง (ซ.ม.)</th>
-                    </tr>
-                  </thead>
-                ) : (
-                  <thead>
-                    <tr>
-                      <th>เลขประจำตัว</th>
-                      <th>ชื่อห้องเรียน</th>
-                      <th>ชื่อ-สกุล</th>
-                      <th>สถานะสุขภาพล่าสุด</th>
-                      <th>การดำเนินการ</th>
-                    </tr>
-                  </thead>
-                )}
+                <thead>
+                  <tr>
+                    <th>เลขที่</th>
+                    <th>ชั้นเรียน</th>
+                    <th>ห้องเรียน</th>
+                    <th>เลขที่บัตรประชาชน</th>
+                    <th>ชื่อ-สกุล</th>
+                    <th>น้ำหนัก (ก.ก.)</th>
+                    <th>ส่วนสูง (ซ.ม.)</th>
+                    <th>รายละเอียดเพิ่มเติม</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {pageStudents.map((s) => (
-                    activeTab === 'pending' ? (
-                      <tr key={s.id}>
-                        <td className="tabular">{s.seatNo}</td>
-                        <td>{s.gradeName}</td>
-                        <td>{s.sectionName}</td>
-                        <td className="tabular">{s.citizenId}</td>
-                        <td style={{ fontWeight: 600 }}>{s.fullName}</td>
-                        <td>
-                          <input
-                            className="f-input" type="number" min="0" placeholder="กรอกน้ำหนัก"
-                            style={{ width: 130, height: 36 }}
-                            value={entries[s.id]?.weight ?? ''}
-                            onChange={(e) => setEntry(s.id, 'weight', e.target.value)}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            className="f-input" type="number" min="0" placeholder="กรอกส่วนสูง"
-                            style={{ width: 130, height: 36 }}
-                            value={entries[s.id]?.height ?? ''}
-                            onChange={(e) => setEntry(s.id, 'height', e.target.value)}
-                          />
-                        </td>
-                      </tr>
-                    ) : (
-                      <tr key={s.id}>
-                        <td className="tabular">{s.citizenId}</td>
-                        <td>{s.sectionName}</td>
-                        <td style={{ fontWeight: 600 }}>{s.fullName}</td>
-                        <td><span className={`badge ${BADGE_CLASS[s.healthStatus.tone]}`}><span className="badge-dot" />{s.healthStatus.label}</span></td>
-                        <td>
-                          <button className="icon-btn" title="ดูข้อมูล" onClick={() => showToast('ฟีเจอร์นี้ยังไม่พร้อมใช้งาน')}>
-                            <IconEye size={16} />
-                          </button>
-                        </td>
-                      </tr>
-                    )
+                    <tr key={s.id}>
+                      <td className="tabular">{s.seatNo}</td>
+                      <td>{s.gradeName}</td>
+                      <td>{s.sectionName}</td>
+                      <td className="tabular">{s.citizenId}</td>
+                      <td style={{ fontWeight: 600 }}>{s.fullName}</td>
+                      <td>
+                        <input
+                          className="f-input" type="number" min="0" placeholder="กรอกน้ำหนัก"
+                          style={{ width: 130, height: 36 }}
+                          value={entries[s.id]?.weight ?? (s.checked ? s.weight : '')}
+                          onChange={(e) => setEntry(s.id, 'weight', e.target.value)}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          className="f-input" type="number" min="0" placeholder="กรอกส่วนสูง"
+                          style={{ width: 130, height: 36 }}
+                          value={entries[s.id]?.height ?? (s.checked ? s.height : '')}
+                          onChange={(e) => setEntry(s.id, 'height', e.target.value)}
+                        />
+                      </td>
+                      <td>
+                        <button className="btn btn-outline btn-sm" onClick={() => setFindingsFor(s.id)}>
+                          <IconClipboardCheck size={14} />บันทึกผลตรวจ
+                        </button>
+                      </td>
+                    </tr>
                   ))}
                 </tbody>
               </table>
@@ -332,15 +334,13 @@ export default function HealthCheckupDetailPage({ school, onBack, showToast, onS
         )}
       </div>
 
-      {activeTab === 'pending' && (
-        <div className="form-footer-bar">
-          <span className="draft-note"><span className="draft-dot" />ร่างแบบฟอร์ม (บันทึกล่าสุด: {timeAgoTh(lastSavedAt)})</span>
-          <div className="actions">
-            <button className="btn btn-neutral btn-sm" onClick={onBack}>ยกเลิก</button>
-            <button className="btn btn-primary btn-sm" onClick={handleSave}>บันทึก</button>
-          </div>
+      <div className="form-footer-bar">
+        <span className="draft-note"><span className="draft-dot" />ร่างแบบฟอร์ม (บันทึกล่าสุด: {timeAgoTh(lastSavedAt)})</span>
+        <div className="actions">
+          <button className="btn btn-neutral btn-sm" onClick={onBack}>ยกเลิก</button>
+          <button className="btn btn-primary btn-sm" onClick={handleSave}>บันทึก</button>
         </div>
-      )}
+      </div>
 
       {showSuccess && (
         <SuccessModal
@@ -349,6 +349,22 @@ export default function HealthCheckupDetailPage({ school, onBack, showToast, onS
           onClose={() => setShowSuccess(false)}
         />
       )}
+
+      {findingsFor && (() => {
+        const s = roster.find((r) => r.id === findingsFor)
+        if (!s) return null
+        return (
+          <CheckupFindingsModal
+            student={s}
+            weightKg={entries[s.id]?.weight}
+            heightCm={entries[s.id]?.height}
+            ageYears={estimateAgeYears(s.gradeName)}
+            initial={entries[s.id] ?? s.findings}
+            onCancel={() => setFindingsFor(null)}
+            onSave={(findings) => { setEntryBulk(s.id, findings); setFindingsFor(null) }}
+          />
+        )
+      })()}
     </section>
   )
 }

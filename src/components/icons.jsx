@@ -118,6 +118,12 @@ export const IconPin2 = (p) => ( // pin marking "sticky note" for pin sidebar to
 export const IconGraduationCap = (p) => (
   <Svg {...p}><path d="M2 9.5 12 5l10 4.5-10 4.5-10-4.5Z" /><path d="M6 11.5V17c0 1.3 2.7 3 6 3s6-1.7 6-3v-5.5" /><path d="M21 10v6" /></Svg>
 )
+// MIH Design System "School" icon (Material Symbols, node 2485:3139) — filled, not stroke.
+export const IconSchool = ({ size = 18, className = '', ...rest }) => (
+  <svg className={`ic ${className}`} width={size} height={size} viewBox="0 -960 960 960" fill="currentColor" {...rest}>
+    <path d="M479-120 189-279v-240L40-600l439-240 441 240v317h-60v-282l-91 46v240L479-120Zm0-308 315-172-315-169-313 169 313 172Zm0 240 230-127v-168L479-360 249-485v170l230 127Z" />
+  </svg>
+)
 export const IconClock = (p) => (
   <Svg {...p}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></Svg>
 )
@@ -166,4 +172,9 @@ export const IconX = (p) => (
 )
 export const IconAlertOctagon = (p) => (
   <Svg {...p}><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></Svg>
+)
+export const IconMore = (p) => (
+  <Svg {...p} fill="currentColor" stroke="none">
+    <circle cx="12" cy="5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="19" r="1.6" />
+  </Svg>
 )

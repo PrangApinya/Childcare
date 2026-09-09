@@ -4,6 +4,7 @@ import {
 } from '../components/icons.jsx'
 import SchoolLocationMap from '../components/schools/SchoolLocationMap.jsx'
 import TagInput from '../components/schools/TagInput.jsx'
+import HealthTeacherInput from '../components/schools/HealthTeacherInput.jsx'
 import RoomRosterBuilder from '../components/schools/RoomRosterBuilder.jsx'
 import TermDateRanges, { blankTerms } from '../components/schools/TermDateRanges.jsx'
 import SuccessModal from '../components/SuccessModal.jsx'
@@ -18,7 +19,7 @@ function todayThaiLabel() {
   return `${d.getDate()} ${THAI_MONTHS_ABBR[d.getMonth()]} ${d.getFullYear() + 543}`
 }
 
-function emptyFormFor(school) {
+function emptyFormFor(school, activeHealthCenter) {
   return {
     nameTh: school?.name ?? '',
     nameEn: school?.nameEn ?? '',
@@ -33,11 +34,10 @@ function emptyFormFor(school) {
     fax: school?.fax ?? '',
     website: school?.website ?? '',
     email: school?.email ?? '',
-    healthCenter: school?.healthCenterAssigned ?? '',
+    healthCenter: school?.healthCenterAssigned ?? activeHealthCenter ?? '',
     coordinationCenter: school?.coordinationCenter ?? '',
     healthCenterBranch: school?.healthCenterBranch ?? '',
     officeDistrict: school?.officeDistrict ?? '',
-    healthTeacher: school?.coordinator ?? '',
     termsPerYear: school?.termsPerYear ?? '',
   }
 }
@@ -63,19 +63,20 @@ function timeAgoTh(ts) {
   return `${Math.round(diffSec / 60)} นาทีที่แล้ว`
 }
 
-export default function SchoolFormPage({ mode, school, onCancel, onSubmit, onDone, showToast }) {
+export default function SchoolFormPage({ mode, school, activeHealthCenter, onCancel, onSubmit, onDone, showToast }) {
   const isEdit = mode === 'edit'
   const draftKey = draftKeyFor(mode, school)
   const draft = useRef(loadDraft(draftKey))
 
   const [showSuccess, setShowSuccess] = useState(false)
-  const [form, setForm] = useState(draft.current?.form ?? emptyFormFor(school))
+  const [form, setForm] = useState(draft.current?.form ?? emptyFormFor(school, activeHealthCenter))
   const [lat, setLat] = useState(draft.current?.lat ?? school?.lat ?? BANGKOK.lat)
   const [lng, setLng] = useState(draft.current?.lng ?? school?.lng ?? BANGKOK.lng)
   const [terms, setTerms] = useState(draft.current?.terms ?? school?.terms ?? [])
   const [gradeLevels, setGradeLevels] = useState(draft.current?.gradeLevels ?? school?.gradeTags ?? (isEdit ? [] : DEFAULT_GRADE_TAGS))
   const [rooms, setRooms] = useState(draft.current?.rooms ?? school?.sampleRooms ?? [])
   const [rosterFiles, setRosterFiles] = useState(draft.current?.rosterFiles ?? school?.sampleRosterFiles ?? [])
+  const [healthTeachers, setHealthTeachers] = useState(draft.current?.healthTeachers ?? (school?.coordinator ? [{ name: school.coordinator }] : []))
   const [photo, setPhoto] = useState(draft.current?.photo ?? null)
   const [searchQuery, setSearchQuery] = useState('')
   const [searching, setSearching] = useState(false)
@@ -86,11 +87,11 @@ export default function SchoolFormPage({ mode, school, onCancel, onSubmit, onDon
 
   // Live autosave to localStorage — the footer's "last saved" note reflects a real timestamp.
   useEffect(() => {
-    const snapshot = { form, lat, lng, terms, gradeLevels, rooms, rosterFiles, photo, lastSavedAt: Date.now() }
+    const snapshot = { form, lat, lng, terms, gradeLevels, rooms, rosterFiles, healthTeachers, photo, lastSavedAt: Date.now() }
     localStorage.setItem(draftKey, JSON.stringify(snapshot))
     setLastSavedAt(snapshot.lastSavedAt)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, lat, lng, terms, gradeLevels, rooms, rosterFiles, photo])
+  }, [form, lat, lng, terms, gradeLevels, rooms, rosterFiles, healthTeachers, photo])
 
   useEffect(() => {
     const id = setInterval(() => forceTick((t) => t + 1), 15000)
@@ -161,8 +162,9 @@ export default function SchoolFormPage({ mode, school, onCancel, onSubmit, onDon
       coordinationCenter: form.coordinationCenter,
       healthCenterBranch: form.healthCenterBranch,
       officeDistrict: form.officeDistrict,
-      coordinator: form.healthTeacher || '—',
-      coordinatorPhone: form.phone || '—',
+      coordinator: healthTeachers.map((t) => t.name).join(', ') || '—',
+      coordinatorPhone: healthTeachers.map((t) => t.phone).find(Boolean) || form.phone || '—',
+      healthTeachers,
       termsPerYear: form.termsPerYear,
       terms,
       gradeTags: gradeLevels,
@@ -250,7 +252,16 @@ export default function SchoolFormPage({ mode, school, onCancel, onSubmit, onDon
             <Field label="E-mail"><input className="f-input" placeholder="ระบุ" value={form.email} onChange={(e) => set('email', e.target.value)} /></Field>
           </div>
           <div className="field-grid-2">
-            <Field label="ศูนย์บริการสาธารณสุขที่ดูแล"><input className="f-input" placeholder="ระบุ" value={form.healthCenter} onChange={(e) => set('healthCenter', e.target.value)} /></Field>
+            <Field label="ศูนย์บริการสาธารณสุขที่ดูแล">
+              {isEdit ? (
+                <input className="f-input" placeholder="ระบุ" value={form.healthCenter} onChange={(e) => set('healthCenter', e.target.value)} />
+              ) : (
+                <>
+                  <div className="f-view">{form.healthCenter}</div>
+                  <div className="f-help">โรงเรียนที่สร้างใหม่จะถูกกำหนดให้อยู่ในศูนย์นี้ตามศูนย์ที่เลือกไว้ด้านบน</div>
+                </>
+              )}
+            </Field>
             <Field label="ศูนย์ประสานงาน"><input className="f-input" placeholder="ระบุ" value={form.coordinationCenter} onChange={(e) => set('coordinationCenter', e.target.value)} /></Field>
           </div>
           <div className="field-grid-2">
@@ -258,7 +269,11 @@ export default function SchoolFormPage({ mode, school, onCancel, onSubmit, onDon
             <Field label="สำนักงานเขตที่ดูแล"><input className="f-input" placeholder="ระบุ" value={form.officeDistrict} onChange={(e) => set('officeDistrict', e.target.value)} /></Field>
           </div>
           <Field label="ครูอนามัย">
-            <input className="f-input" placeholder="ระบุ" value={form.healthTeacher} onChange={(e) => set('healthTeacher', e.target.value)} />
+            <HealthTeacherInput
+              teachers={healthTeachers}
+              onAdd={(t) => setHealthTeachers((list) => [...list, t])}
+              onRemove={(i) => setHealthTeachers((list) => list.filter((_, idx) => idx !== i))}
+            />
           </Field>
         </div>
       </div>

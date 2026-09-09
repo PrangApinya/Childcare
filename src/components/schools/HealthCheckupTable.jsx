@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { IconSort } from '../icons.jsx'
 import { schoolIconStyle } from './schoolColors.js'
 
-const SORT_FIELD = { code: 'code', name: 'name', lastSurvey: 'lastSurvey', studentCount: 'studentCount' }
+const SORT_FIELD = { code: 'code', name: 'name', checkupDate: 'checkupDateIso', studentCount: 'studentCount' }
 
 export default function HealthCheckupTable({ schools, onCheckup }) {
   const [sort, setSort] = useState({ key: null, dir: 1 })
@@ -34,7 +34,8 @@ export default function HealthCheckupTable({ schools, onCheckup }) {
           <tr>
             <th onClick={() => toggleSort(SORT_FIELD.code)}><span className="th-inner">รหัสโรงเรียน <IconSort style={sortStyle('code')} /></span></th>
             <th onClick={() => toggleSort(SORT_FIELD.name)}><span className="th-inner">ชื่อโรงเรียน <IconSort style={sortStyle('name')} /></span></th>
-            <th onClick={() => toggleSort(SORT_FIELD.lastSurvey)}><span className="th-inner">วันที่สำรวจ <IconSort style={sortStyle('lastSurvey')} /></span></th>
+            <th onClick={() => toggleSort(SORT_FIELD.checkupDate)}><span className="th-inner">วันที่ตรวจ <IconSort style={sortStyle('checkupDateIso')} /></span></th>
+            <th>กิจกรรมที่จะทำ</th>
             <th onClick={() => toggleSort(SORT_FIELD.studentCount)}><span className="th-inner">จำนวนนักเรียน <IconSort style={sortStyle('studentCount')} /></span></th>
             <th>การดำเนินการ</th>
           </tr>
@@ -51,10 +52,13 @@ export default function HealthCheckupTable({ schools, onCheckup }) {
                   <span style={{ fontWeight: 600 }}>{s.name}</span>
                 </div>
               </td>
-              <td className="tabular">{s.lastSurveyLabel}</td>
+              <td className="tabular">{s.checkupDateLabel}</td>
+              <td><span className="badge badge-green"><span className="badge-dot" />{s.checkupActivity}</span></td>
               <td className="tabular">{s.studentCount.toLocaleString('th-TH')}</td>
               <td>
-                <button className="btn btn-primary btn-sm" onClick={() => onCheckup(s)}>ตรวจสุขภาพ</button>
+                <button className="btn btn-primary btn-sm" onClick={() => onCheckup(s)}>
+                  {s.checkupActivity === 'ฉีดวัคซีน' ? 'ฉีดวัคซีน' : 'ตรวจสุขภาพ'}
+                </button>
               </td>
             </tr>
           ))}

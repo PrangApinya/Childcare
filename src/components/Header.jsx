@@ -10,9 +10,9 @@ const notifIcon = { alert: IconAlertTriangle, inbox: IconInbox, check: IconCheck
 const notifColor = { alert: '#92400E', inbox: '#1D4ED8', check: 'var(--text-brand)' }
 const shortCenterName = (name) => name.replace('ศูนย์บริการสาธารณสุข', 'ศูนย์')
 
-export default function Header({ crumbText = 'สถานศึกษา / ข้อมูลนักเรียน' }) {
+export default function Header({ crumbText = 'สถานศึกษา / สถานศึกษา', healthCenter, onHealthCenterChange }) {
   const [openDD, setOpenDD] = useState(null) // 'loc' | 'notif' | 'profile' | null
-  const [location, setLocation] = useState(healthCenters[0])
+  const location = healthCenter ?? healthCenters[0]
   const [fontSize, setFontSize] = useState(16)
   const rootRef = useRef(null)
 
@@ -49,7 +49,7 @@ export default function Header({ crumbText = 'สถานศึกษา / ข�
             <button
               key={loc}
               className={`dd-item${loc === location ? ' active' : ''}`}
-              onClick={() => { setLocation(loc); setOpenDD(null) }}
+              onClick={() => { onHealthCenterChange?.(loc); setOpenDD(null) }}
             >
               {loc}
             </button>

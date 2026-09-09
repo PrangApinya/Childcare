@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react'
-import { IconSearch, IconChevronDown, IconUpload, IconGridView, IconListView, IconFileText, IconSyringe, IconEye } from '../components/icons.jsx'
+import {
+  IconSearch, IconChevronDown, IconUpload, IconGridView, IconListView,
+  IconFileText, IconSyringe, IconEye, IconClipboardCheck, IconTrend, IconHeart,
+} from '../components/icons.jsx'
 import Pagination from '../components/Pagination.jsx'
 import TabBar from '../components/TabBar.jsx'
 import { generateDaycareServiceStatus } from '../data/daycare.js'
@@ -8,8 +11,12 @@ const PAGE_SIZE = 20
 const YEARS = ['2569', '2568', '2567']
 const DATE_FILTERS = ['วันนี้', '7 วันที่ผ่านมา', '30 วันที่ผ่านมา', 'ทั้งหมด']
 const SORTS = ['ล่าสุด', 'เก่าสุด', 'ชื่อ A-Z']
+// ให้ตรงกับหน้าประวัติการให้บริการฝั่งสถานศึกษา (ServiceHistoryPage)
 const TABS = [
   { key: 'checkup', label: 'ตรวจสุขภาพทั่วไป', icon: IconFileText },
+  { key: 'dental', label: 'ตรวจทันตกรรม', icon: IconClipboardCheck },
+  { key: 'development', label: 'การตรวจพัฒนาการ', icon: IconTrend },
+  { key: 'mental', label: 'สุขภาพจิต', icon: IconHeart },
   { key: 'vaccine', label: 'ฉีดวัคซีน', icon: IconSyringe },
 ]
 const BADGE_CLASS = { green: 'badge-green', orange: 'badge-orange' }

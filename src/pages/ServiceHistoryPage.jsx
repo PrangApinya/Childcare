@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react'
-import { IconSearch, IconChevronDown, IconUpload, IconGridView, IconListView, IconFileText, IconSyringe } from '../components/icons.jsx'
+import {
+  IconSearch, IconChevronDown, IconUpload, IconGridView, IconListView,
+  IconFileText, IconSyringe, IconClipboardCheck, IconTrend, IconHeart,
+} from '../components/icons.jsx'
 import ServiceHistoryTable from '../components/schools/ServiceHistoryTable.jsx'
 import TabBar from '../components/TabBar.jsx'
 import Pagination from '../components/Pagination.jsx'
@@ -9,8 +12,12 @@ const PAGE_SIZE = 20
 const YEARS = ['2569', '2568', '2567']
 const DATE_FILTERS = ['วันนี้', '7 วันที่ผ่านมา', '30 วันที่ผ่านมา', 'ทั้งหมด']
 const SORTS = ['ล่าสุด', 'เก่าสุด', 'ชื่อ A-Z']
+// ให้ตรงกับหมวดตรวจสุขภาพในหน้าข้อมูลสุขภาพของนักเรียน (StudentProfilePage)
 const TABS = [
   { key: 'checkup', label: 'ตรวจสุขภาพทั่วไป', icon: IconFileText },
+  { key: 'dental', label: 'ตรวจทันตกรรม', icon: IconClipboardCheck },
+  { key: 'development', label: 'การตรวจพัฒนาการ', icon: IconTrend },
+  { key: 'mental', label: 'สุขภาพจิต', icon: IconHeart },
   { key: 'vaccine', label: 'ฉีดวัคซีน', icon: IconSyringe },
 ]
 

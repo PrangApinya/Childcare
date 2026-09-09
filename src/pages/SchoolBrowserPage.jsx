@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  IconSearch, IconChevronDown, IconPlus, IconUpload, IconGridView, IconListView,
+  IconSearch, IconChevronDown, IconPlus, IconUpload, IconDownload, IconGridView, IconListView,
 } from '../components/icons.jsx'
 import SchoolCard from '../components/schools/SchoolCard.jsx'
 import RoomTable from '../components/schools/RoomTable.jsx'
 import SchoolListTable from '../components/schools/SchoolListTable.jsx'
 import Pagination from '../components/Pagination.jsx'
+import BemisImportModal from '../components/schools/BemisImportModal.jsx'
 import { districts, subdistricts, generateRooms } from '../data/schools.js'
 
 const PAGE_SIZE = 20
@@ -24,6 +25,7 @@ export default function SchoolBrowserPage({ schools, showToast, onOpenGrade, onO
   const [selectedId, setSelectedId] = useState(schools[0]?.id ?? null)
   const [roomPage, setRoomPage] = useState(1)
   const [listPage, setListPage] = useState(1)
+  const [showBemisImport, setShowBemisImport] = useState(false)
 
   const noFilters = search === '' && district === 'ทั้งหมด' && subdistrict === 'ทั้งหมด'
 
@@ -64,8 +66,8 @@ export default function SchoolBrowserPage({ schools, showToast, onOpenGrade, onO
 
   function handleExport() {
     if (!selected) return
-    const header = 'รหัสห้อง,ชื่อห้องเรียน,วันที่สำรวจ,จำนวนนักเรียน\n'
-    const body = rooms.map((r) => `${r.code},${r.name},${r.surveyDate},${r.studentCount}`).join('\n')
+    const header = 'รหัสห้อง,ชื่อห้องเรียน,ครูประจำชั้น,วันที่สำรวจ,จำนวนนักเรียน\n'
+    const body = rooms.map((r) => `${r.code},${r.name},${r.teacherName},${r.surveyDate},${r.studentCount}`).join('\n')
     const blob = new Blob([`﻿${header}${body}`], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -80,7 +82,7 @@ export default function SchoolBrowserPage({ schools, showToast, onOpenGrade, onO
 
   return (
     <section className="panel" style={{ paddingTop: 0 }}>
-      <h1 className="page-title">ข้อมูลนักเรียน</h1>
+      <h1 className="page-title">สถานศึกษา</h1>
 
       <div className="toolbar-card">
         <div className="search-input-wrap">
@@ -107,6 +109,9 @@ export default function SchoolBrowserPage({ schools, showToast, onOpenGrade, onO
           <button className="btn btn-primary btn-sm" onClick={onOpenCreate}>
             <IconPlus size={16} />สร้างโรงเรียน
           </button>
+          <button className="btn btn-outline btn-sm" onClick={() => setShowBemisImport(true)}>
+            <IconDownload size={16} />นำเข้าข้อมูลจาก BEMIS
+          </button>
           <button className="btn btn-outline btn-sm" onClick={handleExport}>
             <IconUpload size={16} />นำออกเอกสาร
           </button>
@@ -126,9 +131,12 @@ export default function SchoolBrowserPage({ schools, showToast, onOpenGrade, onO
                 ไม่พบโรงเรียนที่ตรงกับตัวกรอง
               </div>
             )}
-            {filtered.map((s) => (
+            {pageSchools.map((s) => (
               <SchoolCard key={s.id} school={s} selected={selected?.id === s.id} onSelect={() => setSelectedId(s.id)} onOpen={onOpenSchool} />
             ))}
+            {filtered.length > 0 && (
+              <Pagination page={listPage} totalPages={listTotalPages} pageSize={PAGE_SIZE} totalItems={filtered.length} onChange={setListPage} />
+            )}
           </div>
 
           <div className="table-col">
@@ -159,6 +167,17 @@ export default function SchoolBrowserPage({ schools, showToast, onOpenGrade, onO
             </>
           )}
         </div>
+      )}
+
+      {showBemisImport && (
+        <BemisImportModal
+          schools={schools}
+          onCancel={() => setShowBemisImport(false)}
+          onDone={() => {
+            setShowBemisImport(false)
+            showToast('นำเข้าข้อมูลจาก BEMIS เรียบร้อยแล้ว')
+          }}
+        />
       )}
     </section>
   )

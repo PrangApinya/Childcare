@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { IconX, IconPlus } from './icons.jsx'
 import MultiSelectField from './MultiSelectField.jsx'
-import { SERVICE_CLASS_OPTIONS } from '../data/services.js'
+import { SERVICE_CLASS_OPTIONS, VACCINE_CATALOG } from '../data/services.js'
+
+const DOSE_OPTIONS = [...new Set(VACCINE_CATALOG.map((v) => v.dose))]
 
 export default function ServiceModal({ initial, onCancel, onSave }) {
   const isEdit = !!initial
@@ -10,6 +12,17 @@ export default function ServiceModal({ initial, onCancel, onSave }) {
   const [inputType, setInputType] = useState(initial?.inputType ?? '')
   const [dropdownOptions, setDropdownOptions] = useState(initial?.dropdownOptions ?? [])
   const [optionDraft, setOptionDraft] = useState('')
+
+  const isVaccineService = name.trim() === 'ฉีดวัคซีน'
+  const [vaccineType, setVaccineType] = useState(initial?.vaccineType ?? VACCINE_CATALOG[0].label)
+  const [vaccineLotNumber, setVaccineLotNumber] = useState(initial?.vaccineLotNumber ?? '')
+  const [vaccineDose, setVaccineDose] = useState(initial?.vaccineDose ?? VACCINE_CATALOG[0].dose)
+
+  function handleVaccineTypeChange(label) {
+    setVaccineType(label)
+    const v = VACCINE_CATALOG.find((x) => x.label === label)
+    if (v) setVaccineDose(v.dose)
+  }
 
   function addOption() {
     const v = optionDraft.trim()
@@ -22,9 +35,17 @@ export default function ServiceModal({ initial, onCancel, onSave }) {
   }
 
   function handleSave() {
-    if (!name.trim() || classes.length === 0 || !inputType) return
-    if (inputType === 'dropdown' && dropdownOptions.length === 0) return
-    onSave({ name: name.trim(), classes, inputType, dropdownOptions: inputType === 'dropdown' ? dropdownOptions : [] })
+    if (!name.trim() || classes.length === 0) return
+    if (!isVaccineService && !inputType) return
+    if (!isVaccineService && inputType === 'dropdown' && dropdownOptions.length === 0) return
+    if (isVaccineService && (!vaccineType || !vaccineLotNumber.trim() || !vaccineDose.trim())) return
+    onSave({
+      name: name.trim(),
+      classes,
+      inputType,
+      dropdownOptions: inputType === 'dropdown' ? dropdownOptions : [],
+      ...(isVaccineService ? { vaccineType, vaccineLotNumber: vaccineLotNumber.trim(), vaccineDose: vaccineDose.trim() } : {}),
+    })
   }
 
   return (
@@ -48,37 +69,62 @@ export default function ServiceModal({ initial, onCancel, onSave }) {
             />
           </div>
 
-          <label className="f-label">ลักษณะการตรวจ</label>
-          <select className="f-input" style={{ marginBottom: dropdownOptions.length || inputType === 'dropdown' ? 12 : 16 }} value={inputType} onChange={(e) => setInputType(e.target.value)}>
-            <option value="">เลือกลักษณะการตรวจ</option>
-            <option value="text">กรอกค่า</option>
-            <option value="dropdown">Dropdown</option>
-          </select>
+          {!isVaccineService && (
+            <>
+              <label className="f-label">ลักษณะการตรวจ</label>
+              <select className="f-input" style={{ marginBottom: dropdownOptions.length || inputType === 'dropdown' ? 12 : 16 }} value={inputType} onChange={(e) => setInputType(e.target.value)}>
+                <option value="">เลือกลักษณะการตรวจ</option>
+                <option value="text">กรอกค่า</option>
+                <option value="dropdown">Dropdown</option>
+              </select>
 
-          {inputType === 'dropdown' && (
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input
-                  className="f-input"
-                  placeholder="กรอกตัวเลือก"
-                  value={optionDraft}
-                  onChange={(e) => setOptionDraft(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addOption() } }}
-                />
-                <button type="button" className="btn btn-outline btn-sm" style={{ flexShrink: 0 }} onClick={addOption}>
-                  <IconPlus size={16} />เพิ่ม
-                </button>
-              </div>
-              {dropdownOptions.length > 0 && (
-                <div className="badge-row" style={{ marginTop: 10 }}>
-                  {dropdownOptions.map((o) => (
-                    <span key={o} className="tag-chip">
-                      {o}
-                      <button aria-label={`ลบตัวเลือก ${o}`} onClick={() => removeOption(o)}>×</button>
-                    </span>
-                  ))}
+              {inputType === 'dropdown' && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input
+                      className="f-input"
+                      placeholder="กรอกตัวเลือก"
+                      value={optionDraft}
+                      onChange={(e) => setOptionDraft(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addOption() } }}
+                    />
+                    <button type="button" className="btn btn-outline btn-sm" style={{ flexShrink: 0 }} onClick={addOption}>
+                      <IconPlus size={16} />เพิ่ม
+                    </button>
+                  </div>
+                  {dropdownOptions.length > 0 && (
+                    <div className="badge-row" style={{ marginTop: 10 }}>
+                      {dropdownOptions.map((o) => (
+                        <span key={o} className="tag-chip">
+                          {o}
+                          <button aria-label={`ลบตัวเลือก ${o}`} onClick={() => removeOption(o)}>×</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
+            </>
+          )}
+
+          {isVaccineService && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginTop: 4 }}>
+              <div>
+                <label className="f-label">ชนิดวัคซีน</label>
+                <select className="f-input" value={vaccineType} onChange={(e) => handleVaccineTypeChange(e.target.value)}>
+                  {VACCINE_CATALOG.map((v) => <option key={v.key} value={v.label}>{v.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="f-label">Lot Number</label>
+                <input className="f-input" placeholder="กรอก Lot Number" value={vaccineLotNumber} onChange={(e) => setVaccineLotNumber(e.target.value)} />
+              </div>
+              <div>
+                <label className="f-label">ปริมาณที่ให้</label>
+                <select className="f-input" value={vaccineDose} onChange={(e) => setVaccineDose(e.target.value)}>
+                  {DOSE_OPTIONS.map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
             </div>
           )}
         </div>

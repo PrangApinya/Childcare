@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5174/src/components/schools/RoomRosterBuilder.jsx)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5174/src/components/ServiceModal.jsx)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5174/src/pages/GradeFormPage.jsx)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:5174/src/data/schools.js)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:51911/src/data/schools.js)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:5174/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:51911/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:5174/ --max-time 5)"
+    ]
+  }
+}

@@ -6,6 +6,7 @@ import Toast from './components/Toast.jsx'
 import SchoolBrowserPage from './pages/SchoolBrowserPage.jsx'
 import HealthCheckupBrowserPage from './pages/HealthCheckupBrowserPage.jsx'
 import HealthCheckupDetailPage from './pages/HealthCheckupDetailPage.jsx'
+import VaccineServicePage from './pages/VaccineServicePage.jsx'
 import ServiceHistoryPage from './pages/ServiceHistoryPage.jsx'
 import ServiceHistoryDetailPage from './pages/ServiceHistoryDetailPage.jsx'
 import DaycareBrowserPage from './pages/DaycareBrowserPage.jsx'
@@ -22,13 +23,16 @@ import AdminUsersPage from './pages/AdminUsersPage.jsx'
 import AccessRightsPage from './pages/AccessRightsPage.jsx'
 import DashboardPage from './pages/DashboardPage.jsx'
 import GradePromotionPage from './pages/GradePromotionPage.jsx'
+import TeacherAssignmentPage from './pages/TeacherAssignmentPage.jsx'
+import ActivityLogPage from './pages/ActivityLogPage.jsx'
 import SchoolFormPage from './pages/SchoolFormPage.jsx'
 import SchoolDetailPage from './pages/SchoolDetailPage.jsx'
 import StudentRosterPage from './pages/StudentRosterPage.jsx'
 import StudentProfilePage from './pages/StudentProfilePage.jsx'
 import PageFooter from './components/PageFooter.jsx'
-import { schools as initialSchools } from './data/schools.js'
+import { schools as initialSchools, healthCenters } from './data/schools.js'
 import { initialDaycareRooms } from './data/daycare.js'
+import { generateInitialActivityLogs } from './data/schoolActivities.js'
 
 const REPORT_TITLES = {
   'report-summary': 'รายงานสรุปผลการตรวจสุขภาพ',
@@ -60,6 +64,8 @@ export default function App() {
   const [subCrumb, setSubCrumb] = useState(null)
   const [schools, setSchools] = useState(initialSchools)
   const [daycareRooms, setDaycareRooms] = useState(initialDaycareRooms)
+  const [activityLogs, setActivityLogs] = useState(() => generateInitialActivityLogs())
+  const [activeHealthCenter, setActiveHealthCenter] = useState(healthCenters[0])
   const [toast, setToast] = useState({ show: false, message: '' })
   const toastTimer = useRef(null)
 
@@ -91,7 +97,7 @@ export default function App() {
   function handleOpenCheckup(school) {
     setViewingCheckupSchool(school)
     setSubCrumb(null)
-    setScreen('health-checkup-detail')
+    setScreen(school.checkupActivity === 'ฉีดวัคซีน' ? 'vaccine-service' : 'health-checkup-detail')
   }
 
   function goToServiceHistory() {
@@ -279,6 +285,36 @@ export default function App() {
     setSubCrumb(null)
   }
 
+  function goToHomeroomTeacher() {
+    setScreen('homeroom-teacher')
+    setEditingSchool(null)
+    setViewingSchool(null)
+    setViewingGrade(null)
+    setViewingStudent(null)
+    setViewingCheckupSchool(null)
+    setViewingServiceSchool(null)
+    setViewingDaycareRoom(null)
+    setViewingDaycareChild(null)
+    setViewingCheckupRoom(null)
+    setViewingServiceRoom(null)
+    setSubCrumb(null)
+  }
+
+  function goToActivityLog() {
+    setScreen('activity-log')
+    setEditingSchool(null)
+    setViewingSchool(null)
+    setViewingGrade(null)
+    setViewingStudent(null)
+    setViewingCheckupSchool(null)
+    setViewingServiceSchool(null)
+    setViewingDaycareRoom(null)
+    setViewingDaycareChild(null)
+    setViewingCheckupRoom(null)
+    setViewingServiceRoom(null)
+    setSubCrumb(null)
+  }
+
   function goToDashboard() {
     setScreen('dashboard')
     setEditingSchool(null)
@@ -314,6 +350,8 @@ export default function App() {
     else if (target === 'health-checkup') goToHealthCheckup()
     else if (target === 'service-history') goToServiceHistory()
     else if (target === 'grade-promotion') goToGradePromotion()
+    else if (target === 'homeroom-teacher') goToHomeroomTeacher()
+    else if (target === 'activity-log') goToActivityLog()
     else if (target === 'daycare') goToDaycare()
     else if (target === 'daycare-checkup') goToDaycareCheckup()
     else if (target === 'daycare-service-history') goToDaycareServiceHistory()
@@ -384,12 +422,17 @@ export default function App() {
         ? ['สถานศึกษา', 'ตรวจสุขภาพนักเรียน', viewingCheckupSchool.name, subCrumb]
         : ['สถานศึกษา', 'ตรวจสุขภาพนักเรียน', viewingCheckupSchool.name]
     }
+    if (screen === 'vaccine-service' && viewingCheckupSchool) {
+      return ['สถานศึกษา', 'ตรวจสุขภาพนักเรียน', viewingCheckupSchool.name]
+    }
     if (screen === 'health-checkup') return ['สถานศึกษา', 'ตรวจสุขภาพนักเรียน']
     if (screen === 'service-history-detail' && viewingServiceSchool) {
       return ['สถานศึกษา', 'ประวัติการให้บริการ', viewingServiceSchool.name]
     }
     if (screen === 'service-history') return ['สถานศึกษา', 'ประวัติการให้บริการ']
     if (screen === 'grade-promotion') return ['สถานศึกษา', 'การเลื่อนชั้น']
+    if (screen === 'homeroom-teacher') return ['สถานศึกษา', 'ครูประจำชั้น']
+    if (screen === 'activity-log') return ['สถานศึกษา', 'บันทึกกิจกรรม']
     if (screen === 'daycare-child' && viewingDaycareRoom && viewingDaycareChild) {
       return ['สถานรับเลี้ยงเด็กกลางวัน', 'สถานรับเลี้ยงเด็กกลางวัน', viewingDaycareRoom.name, viewingDaycareChild.fullName]
     }
@@ -415,8 +458,8 @@ export default function App() {
     if (screen === 'reports') return ['รายงาน', REPORT_TITLES[reportKey] || REPORT_TITLES['report-summary']]
     if (screen === 'admin-users') return ['สิทธิ์การเข้าถึง', 'ผู้ดูแลระบบ']
     if (screen === 'access-rights') return ['สิทธิ์การเข้าถึง', 'สิทธิ์การเข้าถึง']
-    if (screen === 'create-school') return ['สถานศึกษา', 'ข้อมูลนักเรียน', 'สร้างโรงเรียน']
-    if (screen === 'edit-school') return ['สถานศึกษา', 'ข้อมูลนักเรียน', 'แก้ไขโรงเรียน']
+    if (screen === 'create-school') return ['สถานศึกษา', 'สถานศึกษา', 'สร้างโรงเรียน']
+    if (screen === 'edit-school') return ['สถานศึกษา', 'สถานศึกษา', 'แก้ไขโรงเรียน']
     if (screen === 'grade-detail' && viewingSchool && viewingGrade) {
       return subCrumb
         ? ['สถานศึกษา', viewingSchool.name, viewingGrade.name, subCrumb]
@@ -425,7 +468,7 @@ export default function App() {
     if (screen === 'school-detail' && viewingSchool) {
       return subCrumb ? ['สถานศึกษา', viewingSchool.name, subCrumb] : ['สถานศึกษา', viewingSchool.name]
     }
-    return ['สถานศึกษา', 'ข้อมูลนักเรียน']
+    return ['สถานศึกษา', 'สถานศึกษา']
   })()
   const crumbText = crumbItems.join(' / ')
 
@@ -443,9 +486,11 @@ export default function App() {
                 : screen === 'admin-users' || screen === 'access-rights' ? 'users' : 'schools'
         }
         activeSubmenu={
-          screen === 'health-checkup' || screen === 'health-checkup-detail' ? 'student-checkup'
+          screen === 'health-checkup' || screen === 'health-checkup-detail' || screen === 'vaccine-service' ? 'student-checkup'
             : screen === 'service-history' || screen === 'service-history-detail' ? 'school-service-history'
             : screen === 'grade-promotion' ? 'grade-promotion'
+              : screen === 'homeroom-teacher' ? 'homeroom-teacher'
+                : screen === 'activity-log' ? 'activity-log'
               : screen === 'daycare-checkup' || screen === 'daycare-checkup-detail' ? 'daycare-checkup'
                 : screen === 'daycare-service-history' || screen === 'daycare-service-history-detail' ? 'daycare-service-history'
                   : screen === 'daycare-teach-history' ? 'daycare-teach-history'
@@ -461,7 +506,7 @@ export default function App() {
       />
 
       <div className="main-col">
-        <Header crumbText={crumbText} />
+        <Header crumbText={crumbText} healthCenter={activeHealthCenter} onHealthCenterChange={setActiveHealthCenter} />
         <Breadcrumb items={crumbItems} />
 
         <main className="content" ref={scrollRef}>
@@ -471,6 +516,14 @@ export default function App() {
 
           {screen === 'grade-promotion' && (
             <GradePromotionPage showToast={showToast} />
+          )}
+
+          {screen === 'homeroom-teacher' && (
+            <TeacherAssignmentPage showToast={showToast} />
+          )}
+
+          {screen === 'activity-log' && (
+            <ActivityLogPage logs={activityLogs} onLogsChange={setActivityLogs} showToast={showToast} />
           )}
 
           {screen === 'schools' && (
@@ -485,7 +538,7 @@ export default function App() {
           )}
 
           {screen === 'health-checkup' && (
-            <HealthCheckupBrowserPage schools={schools} showToast={showToast} onOpenCheckup={handleOpenCheckup} />
+            <HealthCheckupBrowserPage schools={schools} activityLogs={activityLogs} showToast={showToast} onOpenCheckup={handleOpenCheckup} />
           )}
 
           {screen === 'health-checkup-detail' && viewingCheckupSchool && (
@@ -494,6 +547,14 @@ export default function App() {
               onBack={goToHealthCheckup}
               showToast={showToast}
               onSubCrumbChange={setSubCrumb}
+            />
+          )}
+
+          {screen === 'vaccine-service' && viewingCheckupSchool && (
+            <VaccineServicePage
+              school={viewingCheckupSchool}
+              onBack={goToHealthCheckup}
+              showToast={showToast}
             />
           )}
 
@@ -590,7 +651,7 @@ export default function App() {
           )}
 
           {screen === 'create-school' && (
-            <SchoolFormPage mode="create" onCancel={goToSchools} onSubmit={handleCreateSchool} onDone={goToSchools} showToast={showToast} />
+            <SchoolFormPage mode="create" activeHealthCenter={activeHealthCenter} onCancel={goToSchools} onSubmit={handleCreateSchool} onDone={goToSchools} showToast={showToast} />
           )}
 
           {screen === 'edit-school' && editingSchool && (

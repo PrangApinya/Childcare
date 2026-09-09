@@ -1,13 +1,20 @@
+import { IconPlus } from '../../icons.jsx'
+
 const NUTRITION_CLASS = { green: 'badge-green', orange: 'badge-orange', red: 'badge-red' }
 
-export default function GeneralInfoTab({ record }) {
+export default function GeneralInfoTab({ record, onGoToCheckup }) {
   return (
     <div className="card">
       <div className="card-hd">
-        <div>
+        <div style={{ flex: 1 }}>
           <h3>ข้อมูลการตรวจสุขภาพ</h3>
           <p>ประวัติการสอบถามสุขภาพเบื้องต้น และการตรวจสุขภาพประจำปี</p>
         </div>
+        {onGoToCheckup && (
+          <button className="btn btn-primary btn-sm" onClick={onGoToCheckup}>
+            <IconPlus size={16} />บันทึกผลตรวจสุขภาพ
+          </button>
+        )}
       </div>
       <div className="card-bd">
         <h3 style={{ fontSize: 15, marginBottom: 4 }}>การตรวจสุขภาพประจำปีล่าสุด – {record.latestCheckupDate}</h3>

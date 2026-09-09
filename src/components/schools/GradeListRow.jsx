@@ -33,6 +33,7 @@ export default function GradeListRow({ grade, onView, onEdit }) {
                 <tr>
                   <th>รหัสห้อง</th>
                   <th>ชื่อห้องเรียน</th>
+                  <th>ครูประจำชั้น</th>
                   <th>วันที่สำรวจ</th>
                   <th>จำนวนนักเรียน</th>
                   <th>การดำเนินการ</th>
@@ -43,6 +44,7 @@ export default function GradeListRow({ grade, onView, onEdit }) {
                   <tr key={s.code}>
                     <td className="tabular">{s.code}</td>
                     <td>{s.name}</td>
+                    <td>{s.teacherName}</td>
                     <td className="tabular">{s.surveyDate}</td>
                     <td className="tabular">{s.studentCount.toLocaleString('th-TH')} คน</td>
                     <td>

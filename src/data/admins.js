@@ -9,7 +9,7 @@ export const ADMIN_STATUS_OPTIONS = ['ใช้งานอยู่', 'ระ�
 export const PERMISSION_TREE = [
   {
     key: 'schools', label: 'สถานศึกษา', children: [
-      { key: 'student-info', label: 'ข้อมูลนักเรียน' },
+      { key: 'student-info', label: 'สถานศึกษา' },
       { key: 'student-checkup', label: 'ตรวจสุขภาพนักเรียน' },
       { key: 'school-service-history', label: 'ประวัติการให้บริการ' },
     ],

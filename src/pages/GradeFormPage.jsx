@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { IconArrowLeft, IconPin } from '../components/icons.jsx'
+import TagInput from '../components/schools/TagInput.jsx'
 import RoomRosterBuilder from '../components/schools/RoomRosterBuilder.jsx'
 import SuccessModal from '../components/SuccessModal.jsx'
-import { generateSections } from '../data/schools.js'
+import { generateSections, DEFAULT_GRADE_TAGS } from '../data/schools.js'
 
 // Editing an existing grade opens with its current sections already attached —
 // mirrors the reference design's pre-filled roster rows.
@@ -45,20 +46,21 @@ export default function GradeFormPage({ mode, school, grade, onCancel, onSubmit,
   const draftKey = draftKeyFor(school, isEdit ? grade : null)
   const draft = useRef(loadDraft(draftKey))
 
-  const gradeNames = [isEdit ? grade.name : 'ชั้นเรียนใหม่']
   const [showSuccess, setShowSuccess] = useState(false)
+  const [gradeLevels, setGradeLevels] = useState(draft.current?.gradeLevels ?? (isEdit ? [grade.name] : DEFAULT_GRADE_TAGS))
   const [rooms, setRooms] = useState(draft.current?.rooms ?? (isEdit ? sampleRoomsFor(grade) : []))
   const [rosterFiles, setRosterFiles] = useState(draft.current?.rosterFiles ?? (isEdit ? sampleRosterFilesFor(grade) : []))
+  const [gradeError, setGradeError] = useState('')
   const [roomError, setRoomError] = useState('')
   const [lastSavedAt, setLastSavedAt] = useState(draft.current?.lastSavedAt ?? null)
   const [, forceTick] = useState(0)
 
   useEffect(() => {
-    const snapshot = { rooms, rosterFiles, lastSavedAt: Date.now() }
+    const snapshot = { gradeLevels, rooms, rosterFiles, lastSavedAt: Date.now() }
     localStorage.setItem(draftKey, JSON.stringify(snapshot))
     setLastSavedAt(snapshot.lastSavedAt)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rooms, rosterFiles])
+  }, [gradeLevels, rooms, rosterFiles])
 
   useEffect(() => {
     const id = setInterval(() => forceTick((t) => t + 1), 15000)
@@ -66,12 +68,17 @@ export default function GradeFormPage({ mode, school, grade, onCancel, onSubmit,
   }, [])
 
   function handleSave() {
+    if (gradeLevels.length === 0) {
+      setGradeError('กรุณาเพิ่มชั้นเรียนอย่างน้อย 1 รายการ')
+      showToast('กรุณาตรวจสอบข้อมูลที่จำเป็นอีกครั้ง')
+      return
+    }
     if (rooms.length === 0) {
       setRoomError('กรุณาเพิ่มห้องเรียนอย่างน้อย 1 รายการ')
       showToast('กรุณาตรวจสอบข้อมูลที่จำเป็นอีกครั้ง')
       return
     }
-    onSubmit({ gradeNames, rooms, rosterFiles })
+    onSubmit({ gradeNames: gradeLevels, rooms, rosterFiles })
     localStorage.removeItem(draftKey)
     setShowSuccess(true)
   }
@@ -88,12 +95,30 @@ export default function GradeFormPage({ mode, school, grade, onCancel, onSubmit,
         <h1>{isEdit ? 'แก้ไขชั้นเรียน' : 'เพิ่มชั้นเรียน'}</h1>
       </div>
 
+      {!isEdit && (
+        <div className="form-section">
+          <div className="form-section-hd"><IconPin size={16} /><h3>เพิ่มชั้นเรียน</h3></div>
+          <div className="form-section-bd">
+            <TagInput
+              tags={gradeLevels}
+              placeholder="เพิ่มชั้นเรียน เช่น มัธยมศึกษาปีที่ 1"
+              onAdd={(t) => { setGradeLevels((list) => [...list, t]); setGradeError('') }}
+              onRemove={(t) => {
+                setGradeLevels((list) => list.filter((g) => g !== t))
+                setRooms((list) => list.filter((r) => r.grade !== t))
+              }}
+            />
+            {gradeError && <div className="f-help error">{gradeError}</div>}
+          </div>
+        </div>
+      )}
+
       <div className="form-section">
         <div className="form-section-hd"><IconPin size={16} /><h3>เพิ่มห้องเรียนและรายชื่อนักเรียน</h3></div>
         <div className="form-section-bd">
           <RoomRosterBuilder
-            gradeLevels={gradeNames}
-            showGradeSelect={false}
+            gradeLevels={gradeLevels}
+            showGradeSelect={!isEdit}
             rooms={rooms}
             onAddRoom={(r) => { setRooms((list) => [...list, r]); setRoomError('') }}
             onRemoveRoom={(r) => setRooms((list) => list.filter((x) => !(x.grade === r.grade && x.name === r.name)))}

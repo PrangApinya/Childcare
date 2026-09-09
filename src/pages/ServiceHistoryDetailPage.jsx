@@ -16,6 +16,17 @@ const CHECKUP_STATUS_FILTERS = ['ตรวจแล้ว', 'รอดำเน�
 const VACCINE_STATUS_FILTERS = ['ฉีดแล้ว', 'รอฉีด', 'เกินกำหนด']
 const CHECKUP_TABS = [{ key: 'all', label: 'ทั้งหมด' }, ...CHECKUP_CONDITIONS]
 const VACCINE_TABS = [{ key: 'all', label: 'ทั้งหมด' }, ...VACCINE_TAB_DEFS]
+const GENERIC_TABS = [{ key: 'all', label: 'ทั้งหมด' }]
+// ให้ตรงกับหมวดตรวจสุขภาพในหน้าข้อมูลสุขภาพของนักเรียน (StudentProfilePage) — dental/development/
+// mental ยังไม่มีชุดข้อมูล mock เฉพาะทางระดับโรงเรียน จึงใช้โครงสร้างเดียวกับ "ตรวจสุขภาพทั่วไป"
+// (ตรวจแล้ว/รอดำเนินการ) ไปพลางก่อน
+const KIND_META = {
+  checkup: { label: 'ตรวจสุขภาพทั่วไป' },
+  dental: { label: 'ตรวจทันตกรรม' },
+  development: { label: 'การตรวจพัฒนาการ' },
+  mental: { label: 'สุขภาพจิต' },
+  vaccine: { label: 'ฉีดวัคซีน' },
+}
 const VACCINE_BADGE = {
   done: { label: 'ฉีดแล้ว', cls: 'badge-green' },
   pending: { label: 'รอฉีด', cls: 'badge-orange' },
@@ -29,6 +40,8 @@ function abbrGrade(gradeName) {
 
 export default function ServiceHistoryDetailPage({ school, kind = 'checkup', onBack, showToast }) {
   const isVaccine = kind === 'vaccine'
+  const isCheckup = kind === 'checkup'
+  const kindLabel = KIND_META[kind]?.label || KIND_META.checkup.label
   const roster = useMemo(
     () => (isVaccine ? generateVaccineDetailRoster(school) : generateCheckupDetailRoster(school)),
     [school, isVaccine]
@@ -37,7 +50,7 @@ export default function ServiceHistoryDetailPage({ school, kind = 'checkup', onB
     () => (isVaccine ? generateVaccineDetailSummary(school) : generateServiceDetailSummary(school)),
     [school, isVaccine]
   )
-  const tabs = isVaccine ? VACCINE_TABS : CHECKUP_TABS
+  const tabs = isVaccine ? VACCINE_TABS : isCheckup ? CHECKUP_TABS : GENERIC_TABS
   const statusFilters = isVaccine ? VACCINE_STATUS_FILTERS : CHECKUP_STATUS_FILTERS
 
   const [activeTab, setActiveTab] = useState('all')
@@ -105,7 +118,7 @@ export default function ServiceHistoryDetailPage({ school, kind = 'checkup', onB
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${school.name}-${isVaccine ? 'ฉีดวัคซีน' : 'ตรวจสุขภาพทั่วไป'}.csv`
+    a.download = `${school.name}-${kindLabel}.csv`
     document.body.appendChild(a)
     a.click()
     a.remove()

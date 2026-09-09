@@ -7,8 +7,11 @@ import VaccineHistoryTab from '../components/student/tabs/VaccineHistoryTab.jsx'
 import AttachmentsTab from '../components/student/tabs/AttachmentsTab.jsx'
 import GrowthChartTab from '../components/student/tabs/GrowthChartTab.jsx'
 import AppointmentsTab from '../components/student/tabs/AppointmentsTab.jsx'
-import PlaceholderTab from '../components/student/tabs/PlaceholderTab.jsx'
-import { generateHealthRecord, generateVaccineSchedule, generateGrowthRecords, generateAppointments } from '../data/schools.js'
+import HealthCheckupTab from '../components/student/tabs/HealthCheckupTab.jsx'
+import DentalTab from '../components/student/tabs/DentalTab.jsx'
+import DevelopmentTab from '../components/student/tabs/DevelopmentTab.jsx'
+import MentalHealthTab from '../components/student/tabs/MentalHealthTab.jsx'
+import { generateHealthRecord, generateVaccineSchedule, generateGrowthRecords, generateAppointments, generateCheckupHistory, generateDentalHistory, generateDevelopmentHistory, generateMentalHealthHistory } from '../data/schools.js'
 
 const TABS = [
   { key: 'general', label: 'ข้อมูลทั่วไป' },
@@ -47,6 +50,10 @@ export default function StudentProfilePage({ school, student, onBack, showToast 
   const vaccineSchedule = useMemo(() => generateVaccineSchedule(student, school), [student, school])
   const growthRecords = useMemo(() => generateGrowthRecords(student), [student])
   const appointments = useMemo(() => generateAppointments(student), [student])
+  const [checkupHistory, setCheckupHistory] = useState(() => generateCheckupHistory(student))
+  const [dentalHistory, setDentalHistory] = useState(() => generateDentalHistory(student))
+  const [developmentHistory, setDevelopmentHistory] = useState(() => generateDevelopmentHistory(student))
+  const [mentalHistory, setMentalHistory] = useState(() => generateMentalHealthHistory(student))
 
   return (
     <section className="panel" style={{ paddingTop: 0 }}>
@@ -77,12 +84,36 @@ export default function StudentProfilePage({ school, student, onBack, showToast 
       <TabBar tabs={TABS} active={activeTab} onChange={setActiveTab} />
 
       <div className="panel">
-        {activeTab === 'general' && <GeneralInfoTab record={healthRecord} />}
+        {activeTab === 'general' && <GeneralInfoTab record={healthRecord} onGoToCheckup={() => setActiveTab('health-check')} />}
         {activeTab === 'vaccine' && <VaccineHistoryTab schedule={vaccineSchedule} />}
-        {activeTab === 'health-check' && <PlaceholderTab label="ตรวจสุขภาพทั่วไป" />}
-        {activeTab === 'dental' && <PlaceholderTab label="ตรวจทันตกรรม" />}
-        {activeTab === 'development' && <PlaceholderTab label="การตรวจพัฒนาการ" />}
-        {activeTab === 'mental' && <PlaceholderTab label="สุขภาพจิต" />}
+        {activeTab === 'health-check' && (
+          <HealthCheckupTab
+            history={checkupHistory}
+            showToast={showToast}
+            onSave={(entry) => { setCheckupHistory((cur) => [entry, ...cur]); showToast('บันทึกข้อมูลสุขภาพเรียบร้อยแล้ว') }}
+          />
+        )}
+        {activeTab === 'dental' && (
+          <DentalTab
+            history={dentalHistory}
+            showToast={showToast}
+            onSave={(entry) => { setDentalHistory((cur) => [entry, ...cur]); showToast('บันทึกข้อมูลทันตกรรมเรียบร้อยแล้ว') }}
+          />
+        )}
+        {activeTab === 'development' && (
+          <DevelopmentTab
+            history={developmentHistory}
+            showToast={showToast}
+            onSave={(entry) => { setDevelopmentHistory((cur) => [entry, ...cur]); showToast('บันทึกผลตรวจพัฒนาการเรียบร้อยแล้ว') }}
+          />
+        )}
+        {activeTab === 'mental' && (
+          <MentalHealthTab
+            history={mentalHistory}
+            showToast={showToast}
+            onSave={(entry) => { setMentalHistory((cur) => [entry, ...cur]); showToast('บันทึกผลประเมินสุขภาพจิตเรียบร้อยแล้ว') }}
+          />
+        )}
         {activeTab === 'growth' && <GrowthChartTab records={growthRecords} />}
         {activeTab === 'appointments' && <AppointmentsTab appointments={appointments} />}
         {activeTab === 'attachments' && <AttachmentsTab showToast={showToast} />}

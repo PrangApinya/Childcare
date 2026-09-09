@@ -31,6 +31,7 @@ export default function RoomTable({ rooms, onViewRoom }) {
           <tr>
             <th onClick={() => toggleSort('code')}><span className="th-inner">รหัสห้อง <IconSort style={sortStyle('code')} /></span></th>
             <th onClick={() => toggleSort('name')}><span className="th-inner">ชื่อห้องเรียน <IconSort style={sortStyle('name')} /></span></th>
+            <th onClick={() => toggleSort('teacherName')}><span className="th-inner">ครูประจำชั้น <IconSort style={sortStyle('teacherName')} /></span></th>
             <th onClick={() => toggleSort('surveyDate')}><span className="th-inner">วันที่สำรวจ <IconSort style={sortStyle('surveyDate')} /></span></th>
             <th onClick={() => toggleSort('studentCount')}><span className="th-inner">จำนวนนักเรียน <IconSort style={sortStyle('studentCount')} /></span></th>
             <th>การดำเนินการ</th>
@@ -41,6 +42,7 @@ export default function RoomTable({ rooms, onViewRoom }) {
             <tr key={r.code}>
               <td className="tabular">{r.code}</td>
               <td>{r.name}</td>
+              <td>{r.teacherName}</td>
               <td className="tabular">{r.surveyDate}</td>
               <td className="tabular">{r.studentCount} คน</td>
               <td>

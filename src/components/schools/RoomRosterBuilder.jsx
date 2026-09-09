@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { IconPlus, IconUpload, IconDownload, IconFileText } from '../icons.jsx'
 
 function downloadTemplate() {
@@ -24,6 +24,13 @@ export default function RoomRosterBuilder({
   const [roomName, setRoomName] = useState('')
   const [dragOver, setDragOver] = useState(false)
   const fileInputRef = useRef(null)
+
+  // ชั้นเรียนที่เลือกไว้อาจถูกลบออก หรือยังไม่มีชั้นเรียนตอนที่คอมโพเนนต์นี้ mount ครั้งแรก
+  // (เช่น หน้าเพิ่มชั้นเรียนที่เริ่มจากไม่มีชั้นเรียนเลย) — sync ให้ชี้ไปยังตัวเลือกที่ยังใช้ได้เสมอ
+  useEffect(() => {
+    if (!gradeLevels.includes(grade)) setGrade(gradeLevels[0] || '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gradeLevels])
 
   function add() {
     const name = roomName.trim()

@@ -48,7 +48,7 @@ export default function ServicesPage({ showToast }) {
   }
 
   function handleExport() {
-    const header = 'ลำดับ,ประเภทการตรวจสุขภาพ,ชั้นเรียนที่ใช้,การใช้งาน,สถานะ\n'
+    const header = 'ลำดับ,บริการ,ชั้นเรียนที่ใช้,การใช้งาน,สถานะ\n'
     const body = filtered.map((s) => `${s.order},${s.name},${s.classes.join('/')},${s.active ? 'เปิด' : 'ปิด'},${s.status.label}`).join('\n')
     const blob = new Blob([`﻿${header}${body}`], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
@@ -154,7 +154,7 @@ export default function ServicesPage({ showToast }) {
                 <thead>
                   <tr>
                     <th>ลำดับ</th>
-                    <th>ประเภทการตรวจสุขภาพ</th>
+                    <th>บริการ</th>
                     <th>การใช้งาน</th>
                     <th>สถานะ</th>
                     <th>การดำเนินการ</th>
