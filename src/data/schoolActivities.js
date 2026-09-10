@@ -24,7 +24,7 @@ export function generateInitialTeacherAssignments(count = 24) {
   })
 }
 
-export const ACTIVITY_EXAMPLES = ['ตรวจสุขภาพ', 'ตรวจฟัน', 'ฉีดวัคซีน', 'ตรวจสายตา', 'ตรวจภาวะซีด', 'ตรวจเหา', 'ตรวจพัฒนาการ']
+export const ACTIVITY_EXAMPLES = ['ตรวจสุขภาพ', 'ตรวจฟัน', 'ฉีดวัคซีน', 'ตรวจสายตา', 'ตรวจภาวะซีด', 'ตรวจเหา', 'ตรวจพัฒนาการ', 'ตรวจสุขภาพจิต']
 
 // Activity log entries (newest first) recorded per school/classroom, e.g. "ตรวจสุขภาพ".
 export function generateInitialActivityLogs(count = 24) {

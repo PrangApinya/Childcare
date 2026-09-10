@@ -25,11 +25,7 @@ function HistoryCard({ entry, showToast }) {
           <IconMore size={16} />
         </button>
       </div>
-      <div className="card-bd" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
-        <div>
-          <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>รอบการประเมิน</div>
-          <div style={{ fontSize: 13, fontWeight: 600 }}>ครั้งที่ {entry.round}</div>
-        </div>
+      <div className="card-bd" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 16 }}>
         <div>
           <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>ผลการประเมิน</div>
           <span className={`badge ${RESULT_BADGE[entry.result] || 'badge-grey'}`}><span className="badge-dot" />{entry.result}</span>
@@ -44,9 +40,6 @@ function HistoryCard({ entry, showToast }) {
 }
 
 export default function DevelopmentTab({ history, onSave, showToast }) {
-  const latest = history[0]
-  const suggestedRound = latest?.result === 'สงสัยล่าช้า' && latest.round === 1 ? 2 : 1
-  const [round, setRound] = useState(suggestedRound)
   const [result, setResult] = useState('')
   const [referral, setReferral] = useState('')
 
@@ -54,11 +47,10 @@ export default function DevelopmentTab({ history, onSave, showToast }) {
     onSave({
       id: `development-new-${Date.now()}`,
       recordedDateLabel: todayThaiLabel(),
-      round,
       result,
       referral: result === 'ล่าช้า' ? referral : '',
     })
-    setRound(1); setResult(''); setReferral('')
+    setResult(''); setReferral('')
   }
 
   return (
@@ -69,12 +61,6 @@ export default function DevelopmentTab({ history, onSave, showToast }) {
           <h3 style={{ marginLeft: 8 }}>การตรวจคัดกรองพัฒนาการ (DSPM)</h3>
         </div>
         <div className="card-bd">
-          <label className="f-label">รอบการประเมิน</label>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-            <button type="button" className={`chip${round === 1 ? ' active' : ''}`} onClick={() => setRound(1)}>ครั้งที่ 1</button>
-            <button type="button" className={`chip${round === 2 ? ' active' : ''}`} onClick={() => setRound(2)}>ครั้งที่ 2 (นัดติดตาม)</button>
-          </div>
-
           <label className="f-label">ผลการประเมิน</label>
           <select className="f-input" value={result} onChange={(e) => setResult(e.target.value)}>
             <option value="">เลือกผลประเมิน</option>
@@ -90,12 +76,12 @@ export default function DevelopmentTab({ history, onSave, showToast }) {
         </div>
       </div>
 
-      {result === 'สงสัยล่าช้า' && round === 1 && (
+      {result === 'สงสัยล่าช้า' && (
         <div className="card" style={{ marginBottom: 20, borderColor: 'var(--border-danger, #FCA5A5)' }}>
           <div className="card-bd" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <IconAlertTriangle size={16} style={{ color: 'var(--icon-alertdialog-warning, #D97706)', flexShrink: 0 }} />
             <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-              ระบบแนะนำให้นัดประเมินครั้งที่ 2 ในวันที่ {oneMonthFromNowLabel()} (1 เดือนถัดไป)
+              ระบบแนะนำให้นัดประเมินซ้ำในวันที่ {oneMonthFromNowLabel()} (1 เดือนถัดไป)
             </span>
           </div>
         </div>

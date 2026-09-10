@@ -490,8 +490,8 @@ table.tbl tbody tr:last-child td{ border-bottom:none; }
 
 /* ---- Modal ---- */
 .modal-overlay{ position:fixed; inset:0; background:rgba(100,116,139,.40); display:flex; align-items:center; justify-content:center; z-index:400; padding:20px; }
-.modal{ background:var(--bg-surface); border:1px solid var(--border-default); border-radius:16px; width:100%; max-width:448px; box-shadow:var(--shadow-dropdown); overflow:hidden; }
-.modal-hd{ display:flex; align-items:center; padding:18px 20px; border-bottom:1px solid var(--border-subtle); }
+.modal{ background:var(--bg-surface); border:1px solid var(--border-default); border-radius:16px; width:100%; max-width:448px; max-height:100%; box-shadow:var(--shadow-dropdown); overflow:hidden; display:flex; flex-direction:column; }
+.modal-hd{ display:flex; align-items:center; padding:18px 20px; border-bottom:1px solid var(--border-subtle); flex-shrink:0; }
 .modal-hd h3{ font-size:16px; font-weight:700; color:var(--text-primary); }
 .modal-close{ margin-left:auto; width:28px; height:28px; border-radius:7px; display:flex; align-items:center; justify-content:center; color:var(--text-tertiary); background:none; border:none; flex-shrink:0; }
 .modal-close:hover{ background:var(--bg-hover); color:var(--text-primary); }
@@ -556,8 +556,8 @@ table.tbl tbody tr:last-child td{ border-bottom:none; }
 .dash-alert-row{ display:flex; align-items:flex-start; gap:10px; padding:12px 14px; border-radius:10px; background:var(--bg-hover); font-size:13px; color:var(--text-secondary); }
 .dash-alert-icon{ display:flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:50%; background:var(--status-due-bg); color:var(--status-due-text); flex-shrink:0; }
 
-.modal-bd{ padding:20px; }
-.modal-ft{ display:flex; justify-content:flex-end; gap:8px; padding:16px 20px; border-top:1px solid var(--border-subtle); }
+.modal-bd{ padding:20px; overflow-y:auto; flex:1 1 auto; min-height:0; }
+.modal-ft{ display:flex; justify-content:flex-end; gap:8px; padding:16px 20px; border-top:1px solid var(--border-subtle); flex-shrink:0; }
 .dropzone{ border:2px dashed var(--border-strong); border-radius:12px; padding:28px 16px; text-align:center; color:var(--text-tertiary); font-size:13px; transition:border-color .15s, background .15s; }
 .dropzone:hover{ border-color:var(--brand-400); background:var(--bg-hover); }
 

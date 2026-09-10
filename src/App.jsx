@@ -95,6 +95,11 @@ export default function App() {
   }
 
   function handleOpenCheckup(school) {
+    const hasBatchForm = ['ตรวจสุขภาพ', 'ตรวจฟัน', 'ตรวจพัฒนาการ', 'ตรวจสุขภาพจิต', 'ฉีดวัคซีน'].includes(school.checkupActivity)
+    if (!hasBatchForm) {
+      showToast('ฟีเจอร์นี้ยังไม่พร้อมใช้งาน')
+      return
+    }
     setViewingCheckupSchool(school)
     setSubCrumb(null)
     setScreen(school.checkupActivity === 'ฉีดวัคซีน' ? 'vaccine-service' : 'health-checkup-detail')
@@ -602,7 +607,7 @@ export default function App() {
           )}
 
           {screen === 'daycare-teach-history' && (
-            <DaycareTeachHistoryPage showToast={showToast} />
+            <DaycareTeachHistoryPage rooms={daycareRooms} showToast={showToast} />
           )}
 
           {screen === 'daycare-teach-activities' && (

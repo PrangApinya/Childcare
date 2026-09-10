@@ -1,18 +1,16 @@
 import { useState } from 'react'
 import { IconX } from '../icons.jsx'
-import { TEACH_CLASSES } from '../../data/daycare.js'
 
 export default function TeachActivityModal({ initial, onCancel, onSave }) {
   const isEdit = !!initial
   const [name, setName] = useState(initial?.name ?? '')
-  const [className, setClassName] = useState(initial?.className ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
   const [durationMin, setDurationMin] = useState(initial?.durationMin ?? '')
   const [active, setActive] = useState(initial?.active ?? true)
 
   function handleSave() {
-    if (!name.trim() || !className || !durationMin) return
-    onSave({ name: name.trim(), className, description: description.trim(), durationMin: Number(durationMin), active })
+    if (!name.trim() || !durationMin) return
+    onSave({ name: name.trim(), description: description.trim(), durationMin: Number(durationMin), active })
   }
 
   return (
@@ -25,12 +23,6 @@ export default function TeachActivityModal({ initial, onCancel, onSave }) {
         <div className="modal-bd">
           <label className="f-label">ชื่อกิจกรรม</label>
           <input className="f-input" style={{ marginBottom: 16 }} placeholder="กรอกชื่อกิจกรรม" value={name} onChange={(e) => setName(e.target.value)} />
-
-          <label className="f-label">ชั้นเรียนที่ใช้</label>
-          <select className="f-input" style={{ marginBottom: 16 }} value={className} onChange={(e) => setClassName(e.target.value)}>
-            <option value="">เลือกชั้นเรียนที่ใช้</option>
-            {TEACH_CLASSES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
 
           <label className="f-label">คำอธิบายกิจกรรม</label>
           <textarea

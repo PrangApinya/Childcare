@@ -7,8 +7,22 @@ import Pagination from '../components/Pagination.jsx'
 import SuccessModal from '../components/SuccessModal.jsx'
 import StudentFormPage from './StudentFormPage.jsx'
 import CheckupFindingsModal from '../components/health/CheckupFindingsModal.jsx'
-import { generateSchoolRoster } from '../data/schools.js'
-import { assessNutrition, estimateAgeYears } from '../data/healthAssessment.js'
+import DentalFindingsModal from '../components/health/DentalFindingsModal.jsx'
+import MentalFindingsModal from '../components/health/MentalFindingsModal.jsx'
+import { generateSchoolRoster, DEVELOPMENT_RESULTS, MENTAL_4_DISORDERS } from '../data/schools.js'
+import {
+  assessNutrition, estimateAgeYears, CHECKUP_KIND_BY_ACTIVITY, VISION_RESULTS, LICE_RESULTS, HEARING_RESULTS,
+} from '../data/healthAssessment.js'
+
+const NUTRITION_BADGE = {
+  ผอม: 'badge-red', ค่อนข้างผอม: 'badge-orange', สมส่วน: 'badge-green', ท้วม: 'badge-orange',
+  เริ่มอ้วน: 'badge-red', อ้วน: 'badge-red',
+}
+const MENTAL_BADGE = { ปกติ: 'badge-green', กลุ่มเสี่ยง: 'badge-orange' }
+const REFERRAL_OPTIONS = ['คลินิกกระตุ้นพัฒนาการ', 'งานสุขภาพจิต']
+const DISORDER_LABEL = Object.fromEntries(MENTAL_4_DISORDERS.map((d) => [d.key, d.label]))
+
+const KIND_LABELS = { checkup: 'ตรวจสุขภาพทั่วไป', dental: 'ตรวจทันตกรรม', development: 'การตรวจพัฒนาการ', mental: 'สุขภาพจิต' }
 
 const PAGE_SIZE = 20
 const SORTS = ['เรียงตามเลขที่', 'ชื่อ ก-ฮ', 'เลขประจำตัว']
@@ -24,8 +38,8 @@ function nowTimeLabel() {
   return `${String(d.getHours()).padStart(2, '0')}.${String(d.getMinutes()).padStart(2, '0')} น.`
 }
 
-function draftKeyFor(school) {
-  return `mih-checkup-draft-${school.id}`
+function draftKeyFor(school, kind) {
+  return `mih-checkup-draft-${school.id}-${kind}`
 }
 function loadDraft(key) {
   try {
@@ -44,7 +58,12 @@ function timeAgoTh(ts) {
 }
 
 export default function HealthCheckupDetailPage({ school, onBack, showToast, onSubCrumbChange }) {
-  const draftKey = draftKeyFor(school)
+  const kind = CHECKUP_KIND_BY_ACTIVITY[school.checkupActivity] ?? 'checkup'
+  const isCheckup = kind === 'checkup'
+  const isDental = kind === 'dental'
+  const isDevelopment = kind === 'development'
+  const isMental = kind === 'mental'
+  const draftKey = draftKeyFor(school, kind)
   const draft = useRef(loadDraft(draftKey))
 
   // เมื่อโรงเรียนนี้ถูกบันทึกกิจกรรม "ตรวจสุขภาพ" ไว้ในหน้าบันทึกกิจกรรม ให้แสดงเฉพาะนักเรียนใน
@@ -125,25 +144,54 @@ export default function HealthCheckupDetailPage({ school, onBack, showToast, onS
     setEntries((cur) => ({ ...cur, [id]: { ...cur[id], ...patch } }))
   }
 
+  function findingsOf(s) {
+    return entries[s.id] ?? (s.checked ? s.findings : null) ?? {}
+  }
+
   function handleViewMode(mode) {
     if (mode === 'card') { showToast('ฟีเจอร์นี้ยังไม่พร้อมใช้งาน'); return }
     setViewMode(mode)
   }
 
   function handleExport() {
-    const header = 'เลขที่,ชั้นเรียน,ห้องเรียน,เลขที่บัตรประชาชน,ชื่อ-สกุล,น้ำหนัก,ส่วนสูง,ภาวะโภชนาการ,สายตา,เหา,การได้ยิน\n'
+    let header = ['เลขที่', 'ชั้นเรียน', 'ห้องเรียน', 'เลขที่บัตรประชาชน', 'ชื่อ-สกุล']
+    if (isCheckup) header = [...header, 'น้ำหนัก', 'ส่วนสูง', 'ภาวะโภชนาการ', 'การตรวจสายตา', 'การตรวจเหา', 'การตรวจการได้ยิน']
+    else if (isDental) {
+      header = [...header,
+        'ฟันแท้ผุ (D)', 'ฟันแท้ถูกถอน (M)', 'ฟันแท้ที่อุดแล้ว (F)', 'ฟันน้ำนมผุ', 'เหงือกอักเสบ', 'หินน้ำลาย',
+        'ให้ทันตสุขศึกษา', 'ตรวจแนะนำ', 'ฝึกแปรงฟันถูกวิธี', 'เคลือบฟลูออไรด์', 'เคลือบหลุมร่องฟัน', 'อุดฟัน', 'ถอนฟัน', 'ขูดหินปูน']
+    } else if (isDevelopment) header = [...header, 'ผลการประเมิน', 'ส่งต่อ']
+    else if (isMental) header = [...header, '9S Plus', 'SDQ', 'ข้อสังเกต 4 โรคหลัก', 'ภาวะซึมเศร้า', 'ระดับการดูแล', 'ติดตามผลซ้ำ']
+
     const body = filtered.map((s) => {
-      const w = entries[s.id]?.weight ?? s.weight ?? ''
-      const h = entries[s.id]?.height ?? s.height ?? ''
-      const f = entries[s.id] ?? s.findings
-      const n = w && h ? assessNutrition({ weightKg: Number(w), heightCm: Number(h), ageYears: estimateAgeYears(s.gradeName) }) : null
-      return `${s.seatNo},${s.gradeName},${s.sectionName},${s.citizenId},${s.fullName},${w},${h},${n?.weightForHeight ?? ''},${f?.vision ?? ''},${f?.lice ?? ''},${f?.hearing ?? ''}`
+      const f = findingsOf(s)
+      let row = [s.seatNo, s.gradeName, s.sectionName, s.citizenId, s.fullName]
+      if (isCheckup) {
+        const w = entries[s.id]?.weight ?? s.weight ?? ''
+        const h = entries[s.id]?.height ?? s.height ?? ''
+        const n = w && h ? assessNutrition({ weightKg: Number(w), heightCm: Number(h), ageYears: estimateAgeYears(s.gradeName) }) : null
+        row = [...row, w, h, n?.weightForHeight ?? '', f.vision ?? '', f.lice ?? '', f.hearing ?? '']
+      } else if (isDental) {
+        row = [...row,
+          f.decayedTeeth ?? '', f.missingTeeth ?? '', f.filledTeeth ?? '', f.decayedBabyTeeth ?? '',
+          f.gingivitis ? 'ใช่' : '', f.calculus ? 'ใช่' : '',
+          f.dentalEducation ? 'ใช่' : '', f.checkupAdvice ? 'ใช่' : '', f.brushingTrained ? 'ใช่' : '',
+          f.fluorideCoating ? 'ใช่' : '', f.pitFissureSealant ? 'ใช่' : '', f.filling ? 'ใช่' : '',
+          f.extraction ? 'ใช่' : '', f.scaling ? 'ใช่' : '']
+      } else if (isDevelopment) {
+        row = [...row, f.result ?? '', f.referral ?? '']
+      } else if (isMental) {
+        const disorderList = Object.entries(f.disorders || {}).filter(([, v]) => v).map(([k]) => DISORDER_LABEL[k]).join('; ')
+        row = [...row, f.screen9SPlus ?? '', f.screenSDQ ?? '', disorderList, f.depressionResult ?? '', f.careLevel ?? '', f.followUp ? 'ใช่' : '']
+      }
+      return row.join(',')
     }).join('\n')
-    const blob = new Blob([`﻿${header}${body}`], { type: 'text/csv;charset=utf-8;' })
+
+    const blob = new Blob([`﻿${header.join(',')}\n${body}`], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${school.name}-ตรวจสุขภาพนักเรียน.csv`
+    a.download = `${school.name}-${KIND_LABELS[kind]}.csv`
     document.body.appendChild(a)
     a.click()
     a.remove()
@@ -151,21 +199,25 @@ export default function HealthCheckupDetailPage({ school, onBack, showToast, onS
     showToast('นำออกเอกสารเรียบร้อยแล้ว')
   }
 
+  function isRowDone(v) {
+    if (isCheckup) return v?.weight && v?.height
+    if (isDevelopment) return Boolean(v?.result)
+    if (isMental) return Boolean(v?.screen9SPlus || v?.screenSDQ)
+    return Boolean(v && Object.keys(v).length > 0)
+  }
+
   function handleSave() {
     const doneIds = new Set(
-      Object.entries(entries)
-        .filter(([, v]) => v?.weight && v?.height)
-        .map(([id]) => id)
+      Object.entries(entries).filter(([, v]) => isRowDone(v)).map(([id]) => id)
     )
     if (doneIds.size === 0) {
-      showToast('กรุณากรอกน้ำหนักและส่วนสูงอย่างน้อย 1 รายการ')
+      showToast(isCheckup ? 'กรุณากรอกน้ำหนักและส่วนสูงอย่างน้อย 1 รายการ' : 'กรุณากรอกผลตรวจอย่างน้อย 1 รายการ')
       return
     }
     setRoster((list) => list.map((s) => (doneIds.has(s.id) ? {
       ...s,
       checked: true,
-      weight: Number(entries[s.id].weight),
-      height: Number(entries[s.id].height),
+      ...(isCheckup ? { weight: Number(entries[s.id].weight), height: Number(entries[s.id].height) } : {}),
       findings: entries[s.id],
     } : s)))
     setEntries((cur) => {
@@ -207,6 +259,7 @@ export default function HealthCheckupDetailPage({ school, onBack, showToast, onS
       <div className="stu-topbar" style={{ maxHeight: 'none', opacity: 1, paddingBottom: 8 }}>
         <button className="btn btn-outline btn-sm" onClick={onBack}><IconArrowLeft size={16} />กลับ</button>
         <h1>{school.name}</h1>
+        <span className="badge badge-green" style={{ marginLeft: 8 }}><span className="badge-dot" />{KIND_LABELS[kind]}</span>
       </div>
       {school.checkupRoomNames?.length > 0 && (
         <div style={{ padding: '0 4px 12px', fontSize: 13, color: 'var(--text-tertiary)' }}>
@@ -288,42 +341,282 @@ export default function HealthCheckupDetailPage({ school, onBack, showToast, onS
                     <th>ห้องเรียน</th>
                     <th>เลขที่บัตรประชาชน</th>
                     <th>ชื่อ-สกุล</th>
-                    <th>น้ำหนัก (ก.ก.)</th>
-                    <th>ส่วนสูง (ซ.ม.)</th>
-                    <th>รายละเอียดเพิ่มเติม</th>
+                    {isCheckup && (<>
+                      <th>น้ำหนัก (ก.ก.)</th>
+                      <th>ส่วนสูง (ซ.ม.)</th>
+                      <th>ภาวะโภชนาการ</th>
+                      <th>การตรวจสายตา</th>
+                      <th>การตรวจเหา</th>
+                      <th>การตรวจการได้ยิน</th>
+                      <th>รายละเอียดเพิ่มเติม</th>
+                    </>)}
+                    {isDental && (<>
+                      <th>ให้ทันตสุขศึกษา</th>
+                      <th>ตรวจแนะนำ</th>
+                      <th>ฝึกแปรงฟันถูกวิธี</th>
+                      <th>เคลือบฟลูออไรด์</th>
+                      <th>เคลือบหลุมร่องฟัน</th>
+                      <th>อุดฟัน</th>
+                      <th>ถอนฟัน</th>
+                      <th>ขูดหินปูน</th>
+                      <th>ฟันแท้ผุ D (ซี่)</th>
+                      <th>ฟันแท้ถูกถอน M (ซี่)</th>
+                      <th>ฟันแท้ที่อุดแล้ว F (ซี่)</th>
+                      <th>ฟันน้ำนมผุ (ซี่)</th>
+                      <th>เหงือกอักเสบ</th>
+                      <th>หินน้ำลาย</th>
+                      <th>รายละเอียดเพิ่มเติม</th>
+                    </>)}
+                    {isDevelopment && (<>
+                      <th>ผลการประเมิน</th>
+                      <th>ส่งต่อ</th>
+                    </>)}
+                    {isMental && (<>
+                      <th>9S Plus</th>
+                      <th>SDQ</th>
+                      <th>บันทึกผลตรวจ</th>
+                    </>)}
                   </tr>
                 </thead>
                 <tbody>
-                  {pageStudents.map((s) => (
-                    <tr key={s.id}>
-                      <td className="tabular">{s.seatNo}</td>
-                      <td>{s.gradeName}</td>
-                      <td>{s.sectionName}</td>
-                      <td className="tabular">{s.citizenId}</td>
-                      <td style={{ fontWeight: 600 }}>{s.fullName}</td>
-                      <td>
-                        <input
-                          className="f-input" type="number" min="0" placeholder="กรอกน้ำหนัก"
-                          style={{ width: 130, height: 36 }}
-                          value={entries[s.id]?.weight ?? (s.checked ? s.weight : '')}
-                          onChange={(e) => setEntry(s.id, 'weight', e.target.value)}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          className="f-input" type="number" min="0" placeholder="กรอกส่วนสูง"
-                          style={{ width: 130, height: 36 }}
-                          value={entries[s.id]?.height ?? (s.checked ? s.height : '')}
-                          onChange={(e) => setEntry(s.id, 'height', e.target.value)}
-                        />
-                      </td>
-                      <td>
-                        <button className="btn btn-outline btn-sm" onClick={() => setFindingsFor(s.id)}>
-                          <IconClipboardCheck size={14} />บันทึกผลตรวจ
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {pageStudents.map((s) => {
+                    const f = findingsOf(s)
+                    const weightVal = entries[s.id]?.weight ?? (s.checked ? s.weight : '')
+                    const heightVal = entries[s.id]?.height ?? (s.checked ? s.height : '')
+                    const nutrition = weightVal && heightVal
+                      ? assessNutrition({ weightKg: Number(weightVal), heightCm: Number(heightVal), ageYears: estimateAgeYears(s.gradeName) })
+                      : null
+                    return (
+                      <tr key={s.id}>
+                        <td className="tabular">{s.seatNo}</td>
+                        <td>{s.gradeName}</td>
+                        <td>{s.sectionName}</td>
+                        <td className="tabular">{s.citizenId}</td>
+                        <td style={{ fontWeight: 600 }}>{s.fullName}</td>
+
+                        {isCheckup && (<>
+                          <td>
+                            <input
+                              className="f-input" type="number" min="0" placeholder="กรอกน้ำหนัก"
+                              style={{ width: 130, height: 36 }}
+                              value={weightVal}
+                              onChange={(e) => setEntry(s.id, 'weight', e.target.value)}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              className="f-input" type="number" min="0" placeholder="กรอกส่วนสูง"
+                              style={{ width: 130, height: 36 }}
+                              value={heightVal}
+                              onChange={(e) => setEntry(s.id, 'height', e.target.value)}
+                            />
+                          </td>
+                          <td>
+                            {nutrition
+                              ? <span className={`badge ${NUTRITION_BADGE[nutrition.weightForHeight] || 'badge-grey'}`}><span className="badge-dot" />{nutrition.weightForHeight}</span>
+                              : <span style={{ color: 'var(--text-tertiary)', fontSize: 13 }}>รอข้อมูล</span>}
+                          </td>
+                          <td>
+                            <select
+                              className="f-input" style={{ width: 130, height: 36 }}
+                              value={entries[s.id]?.vision ?? (s.checked ? s.findings?.vision : '') ?? ''}
+                              onChange={(e) => setEntry(s.id, 'vision', e.target.value)}
+                            >
+                              <option value="">เลือกผลตรวจ</option>
+                              {VISION_RESULTS.map((v) => <option key={v} value={v}>{v}</option>)}
+                            </select>
+                          </td>
+                          <td>
+                            <select
+                              className="f-input" style={{ width: 130, height: 36 }}
+                              value={entries[s.id]?.lice ?? (s.checked ? s.findings?.lice : '') ?? ''}
+                              onChange={(e) => setEntry(s.id, 'lice', e.target.value)}
+                            >
+                              <option value="">เลือกผลตรวจ</option>
+                              {LICE_RESULTS.map((v) => <option key={v} value={v}>{v}</option>)}
+                            </select>
+                          </td>
+                          <td>
+                            <select
+                              className="f-input" style={{ width: 130, height: 36 }}
+                              value={entries[s.id]?.hearing ?? (s.checked ? s.findings?.hearing : '') ?? ''}
+                              onChange={(e) => setEntry(s.id, 'hearing', e.target.value)}
+                            >
+                              <option value="">เลือกผลตรวจ</option>
+                              {HEARING_RESULTS.map((v) => <option key={v} value={v}>{v}</option>)}
+                            </select>
+                          </td>
+                          <td>
+                            <button className="btn btn-outline btn-sm" onClick={() => setFindingsFor(s.id)}>
+                              <IconClipboardCheck size={14} />บันทึกผลตรวจ
+                            </button>
+                          </td>
+                        </>)}
+
+                        {isDental && (<>
+                          <td style={{ textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={entries[s.id]?.dentalEducation ?? (s.checked ? f.dentalEducation : false) ?? false}
+                              onChange={(e) => setEntry(s.id, 'dentalEducation', e.target.checked)}
+                            />
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={entries[s.id]?.checkupAdvice ?? (s.checked ? f.checkupAdvice : false) ?? false}
+                              onChange={(e) => setEntry(s.id, 'checkupAdvice', e.target.checked)}
+                            />
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={entries[s.id]?.brushingTrained ?? (s.checked ? f.brushingTrained : false) ?? false}
+                              onChange={(e) => setEntry(s.id, 'brushingTrained', e.target.checked)}
+                            />
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={entries[s.id]?.fluorideCoating ?? (s.checked ? f.fluorideCoating : false) ?? false}
+                              onChange={(e) => setEntry(s.id, 'fluorideCoating', e.target.checked)}
+                            />
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                              <input
+                                type="checkbox"
+                                checked={entries[s.id]?.pitFissureSealant ?? (s.checked ? f.pitFissureSealant : false) ?? false}
+                                onChange={(e) => setEntry(s.id, 'pitFissureSealant', e.target.checked)}
+                              />
+                              {(entries[s.id]?.pitFissureSealant ?? (s.checked ? f.pitFissureSealant : false)) && (
+                                <input
+                                  className="f-input" type="number" min="0" placeholder="จำนวนซี่"
+                                  style={{ width: 90, height: 30 }}
+                                  value={entries[s.id]?.pitFissureSealantTeeth ?? (s.checked ? f.pitFissureSealantTeeth : '') ?? ''}
+                                  onChange={(e) => setEntry(s.id, 'pitFissureSealantTeeth', e.target.value)}
+                                />
+                              )}
+                            </div>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={entries[s.id]?.filling ?? (s.checked ? f.filling : false) ?? false}
+                              onChange={(e) => setEntry(s.id, 'filling', e.target.checked)}
+                            />
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={entries[s.id]?.extraction ?? (s.checked ? f.extraction : false) ?? false}
+                              onChange={(e) => setEntry(s.id, 'extraction', e.target.checked)}
+                            />
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={entries[s.id]?.scaling ?? (s.checked ? f.scaling : false) ?? false}
+                              onChange={(e) => setEntry(s.id, 'scaling', e.target.checked)}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              className="f-input" type="number" min="0"
+                              style={{ width: 80, height: 36 }}
+                              value={entries[s.id]?.decayedTeeth ?? (s.checked ? f.decayedTeeth : '') ?? ''}
+                              onChange={(e) => setEntry(s.id, 'decayedTeeth', e.target.value)}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              className="f-input" type="number" min="0"
+                              style={{ width: 80, height: 36 }}
+                              value={entries[s.id]?.missingTeeth ?? (s.checked ? f.missingTeeth : '') ?? ''}
+                              onChange={(e) => setEntry(s.id, 'missingTeeth', e.target.value)}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              className="f-input" type="number" min="0"
+                              style={{ width: 80, height: 36 }}
+                              value={entries[s.id]?.filledTeeth ?? (s.checked ? f.filledTeeth : '') ?? ''}
+                              onChange={(e) => setEntry(s.id, 'filledTeeth', e.target.value)}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              className="f-input" type="number" min="0"
+                              style={{ width: 80, height: 36 }}
+                              value={entries[s.id]?.decayedBabyTeeth ?? (s.checked ? f.decayedBabyTeeth : '') ?? ''}
+                              onChange={(e) => setEntry(s.id, 'decayedBabyTeeth', e.target.value)}
+                            />
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={entries[s.id]?.gingivitis ?? (s.checked ? f.gingivitis : false) ?? false}
+                              onChange={(e) => setEntry(s.id, 'gingivitis', e.target.checked)}
+                            />
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={entries[s.id]?.calculus ?? (s.checked ? f.calculus : false) ?? false}
+                              onChange={(e) => setEntry(s.id, 'calculus', e.target.checked)}
+                            />
+                          </td>
+                          <td>
+                            <button className="btn btn-outline btn-sm" onClick={() => setFindingsFor(s.id)}>
+                              <IconClipboardCheck size={14} />บันทึกผลตรวจ
+                            </button>
+                          </td>
+                        </>)}
+
+                        {isDevelopment && (<>
+                          <td>
+                            <select
+                              className="f-input" style={{ width: 140, height: 36 }}
+                              value={entries[s.id]?.result ?? (s.checked ? s.findings?.result : '') ?? ''}
+                              onChange={(e) => setEntry(s.id, 'result', e.target.value)}
+                            >
+                              <option value="">เลือกผลประเมิน</option>
+                              {DEVELOPMENT_RESULTS.map((r) => <option key={r} value={r}>{r}</option>)}
+                            </select>
+                          </td>
+                          <td>
+                            <select
+                              className="f-input" style={{ width: 180, height: 36 }}
+                              value={entries[s.id]?.referral ?? (s.checked ? s.findings?.referral : '') ?? ''}
+                              onChange={(e) => setEntry(s.id, 'referral', e.target.value)}
+                              disabled={f.result !== 'ล่าช้า'}
+                            >
+                              <option value="">เลือกหน่วยงานที่ส่งต่อ</option>
+                              {REFERRAL_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+                            </select>
+                          </td>
+                        </>)}
+
+                        {isMental && (<>
+                          <td>
+                            {f.screen9SPlus
+                              ? <span className={`badge ${MENTAL_BADGE[f.screen9SPlus] || 'badge-grey'}`}><span className="badge-dot" />{f.screen9SPlus}</span>
+                              : <span style={{ color: 'var(--text-tertiary)', fontSize: 13 }}>-</span>}
+                          </td>
+                          <td>
+                            {f.screenSDQ
+                              ? <span className={`badge ${MENTAL_BADGE[f.screenSDQ] || 'badge-grey'}`}><span className="badge-dot" />{f.screenSDQ}</span>
+                              : <span style={{ color: 'var(--text-tertiary)', fontSize: 13 }}>-</span>}
+                          </td>
+                          <td>
+                            <button className="btn btn-outline btn-sm" onClick={() => setFindingsFor(s.id)}>
+                              <IconClipboardCheck size={14} />บันทึกผลตรวจ
+                            </button>
+                          </td>
+                        </>)}
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -350,7 +643,7 @@ export default function HealthCheckupDetailPage({ school, onBack, showToast, onS
         />
       )}
 
-      {findingsFor && (() => {
+      {findingsFor && isCheckup && (() => {
         const s = roster.find((r) => r.id === findingsFor)
         if (!s) return null
         return (
@@ -358,6 +651,33 @@ export default function HealthCheckupDetailPage({ school, onBack, showToast, onS
             student={s}
             weightKg={entries[s.id]?.weight}
             heightCm={entries[s.id]?.height}
+            ageYears={estimateAgeYears(s.gradeName)}
+            initial={entries[s.id] ?? s.findings}
+            onCancel={() => setFindingsFor(null)}
+            onSave={(findings) => { setEntryBulk(s.id, findings); setFindingsFor(null) }}
+          />
+        )
+      })()}
+
+      {findingsFor && isDental && (() => {
+        const s = roster.find((r) => r.id === findingsFor)
+        if (!s) return null
+        return (
+          <DentalFindingsModal
+            student={s}
+            initial={entries[s.id] ?? s.findings}
+            onCancel={() => setFindingsFor(null)}
+            onSave={(findings) => { setEntryBulk(s.id, findings); setFindingsFor(null) }}
+          />
+        )
+      })()}
+
+      {findingsFor && isMental && (() => {
+        const s = roster.find((r) => r.id === findingsFor)
+        if (!s) return null
+        return (
+          <MentalFindingsModal
+            student={s}
             ageYears={estimateAgeYears(s.gradeName)}
             initial={entries[s.id] ?? s.findings}
             onCancel={() => setFindingsFor(null)}

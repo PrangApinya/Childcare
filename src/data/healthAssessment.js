@@ -54,3 +54,15 @@ export function assessAnemia({ hb, hct }) {
 export const VISION_RESULTS = ['ปกติ', 'สายตาสั้น', 'อื่นๆ']
 export const LICE_RESULTS = ['ไม่พบ', 'พบ']
 export const HEARING_RESULTS = ['ปกติ', 'ผิดปกติ']
+
+// Maps the "กิจกรรมที่จะทำ" string synced from the activity log (HealthCheckupBrowserPage)
+// to which batch-entry form kind the checkup-detail page should render — each kind's fields
+// mirror the matching StudentProfilePage tab (HealthCheckupTab/DentalTab/DevelopmentTab/
+// MentalHealthTab) so the same visit is captured the same way whether entered per-room or
+// per-student.
+export const CHECKUP_KIND_BY_ACTIVITY = {
+  'ตรวจสุขภาพ': 'checkup',
+  'ตรวจฟัน': 'dental',
+  'ตรวจพัฒนาการ': 'development',
+  'ตรวจสุขภาพจิต': 'mental',
+}

@@ -12,7 +12,6 @@ export const initialDaycareRooms = [
 export const BIRTH_YEAR_BY_ROOM = { 'เด็กเล็ก': 2569, 'เด็กกลาง': 2568, 'เด็กโต': 2567 }
 
 export const TEACH_ACTIVITIES = ['นิทานก่อนนอน', 'ร้องเล่นเต้นระบำ', 'ปั้นดินน้ำมัน', 'เกมจับคู่ภาพ', 'แปรงฟันหลังอาหาร', 'ออกกำลังกายกลางแจ้ง']
-export const TEACH_CLASSES = ['เด็กเล็ก 1 (อายุ 2-3 ปี)', 'เด็กเล็ก 2 (อายุ 3-4 ปี)', 'อนุบาล 1', 'อนุบาล 2']
 const TEACH_TEACHERS = ['ครูอรทัย ศรีสุข', 'ครูพิชญา วงศ์สวัสดิ์', 'ครูสุภารัตน์ แก้วดี', 'ครูวิภาวดี รุ่งเรือง', 'ครูสุวิมล ไพรวัน', 'ครูอัมพร ไชยสิทธิ์', 'ครูวิไลพรรณ สุขสวัสดิ์']
 const THAI_MONTHS_ABBR = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
 
@@ -20,18 +19,24 @@ function dateLabelTh(d) {
   return `${d.getDate()} ${THAI_MONTHS_ABBR[d.getMonth()]} ${d.getFullYear() + 543}`
 }
 
-// Teaching-activity log entries (newest first), used by the "ประวัติการสอน" page.
+// Teaching-activity log entries (newest first), used by the "ประวัติการสอน" page. ชั้นเรียนที่ใช้ is
+// synced to the actual rooms added on the "สถานรับเลี้ยงเด็กกลางวัน" page (initialDaycareRooms),
+// and each entry can cover more than one room.
 export function generateInitialTeachLogs(count = 24) {
+  const roomNames = initialDaycareRooms.map((r) => r.name)
   const base = new Date(2026, 6, 13) // 13 ก.ค. 2569
   return Array.from({ length: count }, (_, i) => {
     const d = new Date(base)
     d.setDate(d.getDate() - i)
+    const classNames = i % 3 === 0
+      ? [roomNames[i % roomNames.length], roomNames[(i + 1) % roomNames.length]]
+      : [roomNames[i % roomNames.length]]
     return {
       id: `log-${i}`,
       dateIso: d.toISOString().slice(0, 10),
       dateLabel: dateLabelTh(d),
       activity: TEACH_ACTIVITIES[i % TEACH_ACTIVITIES.length],
-      className: TEACH_CLASSES[i % TEACH_CLASSES.length],
+      classNames,
       teacher: TEACH_TEACHERS[i % TEACH_TEACHERS.length],
       note: '-',
     }
@@ -50,7 +55,6 @@ export function generateInitialTeachActivities(count = 16) {
     id: `act-${i}`,
     code: `ACT${String(i + 1).padStart(3, '0')}`,
     name: TEACH_ACTIVITIES[i % TEACH_ACTIVITIES.length],
-    className: TEACH_CLASSES[i % TEACH_CLASSES.length],
     description: '',
     durationMin: 20,
     active: i % 4 !== 3,

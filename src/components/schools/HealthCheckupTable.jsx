@@ -57,7 +57,7 @@ export default function HealthCheckupTable({ schools, onCheckup }) {
               <td className="tabular">{s.studentCount.toLocaleString('th-TH')}</td>
               <td>
                 <button className="btn btn-primary btn-sm" onClick={() => onCheckup(s)}>
-                  {s.checkupActivity === 'ฉีดวัคซีน' ? 'ฉีดวัคซีน' : 'ตรวจสุขภาพ'}
+                  {s.checkupActivity}
                 </button>
               </td>
             </tr>

@@ -22,7 +22,7 @@ export default function DaycareTeachActivitiesPage({ showToast }) {
 
   const filtered = useMemo(() => (
     activities.filter((a) => (
-      search.trim() === '' || `${a.name} ${a.className}`.toLowerCase().includes(search.trim().toLowerCase())
+      search.trim() === '' || a.name.toLowerCase().includes(search.trim().toLowerCase())
     ))
   ), [activities, search])
 
@@ -80,7 +80,7 @@ export default function DaycareTeachActivitiesPage({ showToast }) {
           <IconSearch size={20} />
           <input
             className="search-input"
-            placeholder="ค้นหากิจกรรม / ชั้นเรียน"
+            placeholder="ค้นหากิจกรรม"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1) }}
           />
@@ -117,7 +117,6 @@ export default function DaycareTeachActivitiesPage({ showToast }) {
                   <tr>
                     <th>รหัส</th>
                     <th>ชื่อกิจกรรม</th>
-                    <th>ชั้นเรียนที่ใช้</th>
                     <th>ระยะเวลา</th>
                     <th>สถานะ</th>
                     <th>การดำเนินการ</th>
@@ -128,7 +127,6 @@ export default function DaycareTeachActivitiesPage({ showToast }) {
                     <tr key={a.id}>
                       <td className="tabular">{a.code}</td>
                       <td style={{ fontWeight: 600 }}>{a.name}</td>
-                      <td>{a.className}</td>
                       <td className="tabular">{a.durationMin} นาที</td>
                       <td>
                         <span className={`badge ${a.active ? 'badge-green' : 'badge-red'}`}>

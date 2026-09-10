@@ -8,7 +8,7 @@ import { generateInitialTeachLogs, teachLogDateLabel } from '../data/daycare.js'
 const PAGE_SIZE = 20
 const DATE_FILTERS = ['วันนี้', '7 วันที่ผ่านมา', '30 วันที่ผ่านมา', 'ทั้งหมด']
 
-export default function DaycareTeachHistoryPage({ showToast }) {
+export default function DaycareTeachHistoryPage({ rooms, showToast }) {
   const [logs, setLogs] = useState(() => generateInitialTeachLogs())
   const [search, setSearch] = useState('')
   const [dateFilter, setDateFilter] = useState('ทั้งหมด')
@@ -22,7 +22,7 @@ export default function DaycareTeachHistoryPage({ showToast }) {
 
   const filtered = useMemo(() => {
     let list = logs.filter((l) => (
-      search.trim() === '' || `${l.activity} ${l.className} ${l.teacher}`.toLowerCase().includes(search.trim().toLowerCase())
+      search.trim() === '' || `${l.activity} ${l.classNames.join(' ')} ${l.teacher}`.toLowerCase().includes(search.trim().toLowerCase())
     ))
     return [...list].sort((a, b) => b.dateIso.localeCompare(a.dateIso))
   }, [logs, search])
@@ -118,7 +118,7 @@ export default function DaycareTeachHistoryPage({ showToast }) {
                   <tr>
                     <th>วันที่สอน</th>
                     <th>กิจกรรมที่สอน</th>
-                    <th>ชั้นเรียน</th>
+                    <th>ชั้นเรียนที่ใช้</th>
                     <th>ผู้สอน</th>
                     <th>หมายเหตุ</th>
                     <th>การดำเนินการ</th>
@@ -129,7 +129,7 @@ export default function DaycareTeachHistoryPage({ showToast }) {
                     <tr key={l.id}>
                       <td className="tabular">{l.dateLabel}</td>
                       <td style={{ fontWeight: 600 }}>{l.activity}</td>
-                      <td>{l.className}</td>
+                      <td>{l.classNames.join(', ')}</td>
                       <td>{l.teacher}</td>
                       <td>{l.note || '-'}</td>
                       <td>
@@ -155,7 +155,7 @@ export default function DaycareTeachHistoryPage({ showToast }) {
       </div>
 
       {modalOpen && (
-        <TeachLogModal initial={editingLog} onCancel={closeModal} onSave={handleSaveLog} />
+        <TeachLogModal initial={editingLog} roomOptions={rooms.map((r) => r.name)} onCancel={closeModal} onSave={handleSaveLog} />
       )}
 
       {deletingLog && (

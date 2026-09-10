@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react'
-import { IconSearch, IconChevronDown, IconUpload, IconGridView, IconListView, IconFileText, IconSyringe } from '../components/icons.jsx'
+import {
+  IconSearch, IconChevronDown, IconUpload, IconGridView, IconListView,
+  IconFileText, IconSyringe, IconClipboardCheck, IconTrend, IconHeart,
+} from '../components/icons.jsx'
 import HealthCheckupTable from '../components/schools/HealthCheckupTable.jsx'
 import TabBar from '../components/TabBar.jsx'
 import Pagination from '../components/Pagination.jsx'
@@ -9,10 +12,13 @@ const PAGE_SIZE = 20
 const YEARS = ['2569', '2568', '2567']
 const DATE_FILTERS = ['วันนี้', '7 วันที่ผ่านมา', '30 วันที่ผ่านมา', 'ทั้งหมด']
 const SORTS = ['ล่าสุด', 'เก่าสุด', 'ชื่อ A-Z']
-// เฉพาะกิจกรรมที่มีหน้าบันทึกผลแบบกลุ่ม (ตามห้อง) รองรับอยู่แล้ว — ตรวจฟัน/ตรวจพัฒนาการ/สุขภาพจิต
-// ที่บันทึกในหน้าบันทึกกิจกรรมยังไม่มีหน้าบันทึกผลแบบกลุ่มของตัวเอง (มีแค่ในโปรไฟล์รายคน)
+// ให้ตรงกับหมวดตรวจสุขภาพในหน้าประวัติการให้บริการ (ServiceHistoryPage) — ตรวจฟัน/ตรวจพัฒนาการ/
+// สุขภาพจิต ยังไม่มีหน้าบันทึกผลแบบกลุ่ม (ตามห้อง) ของตัวเอง จึงแจ้งเตือนไว้ก่อนเมื่อกดเข้าไปตรวจ
 const TABS = [
-  { key: 'checkup', label: 'ตรวจสุขภาพ', icon: IconFileText, activity: 'ตรวจสุขภาพ' },
+  { key: 'checkup', label: 'ตรวจสุขภาพทั่วไป', icon: IconFileText, activity: 'ตรวจสุขภาพ' },
+  { key: 'dental', label: 'ตรวจทันตกรรม', icon: IconClipboardCheck, activity: 'ตรวจฟัน' },
+  { key: 'development', label: 'การตรวจพัฒนาการ', icon: IconTrend, activity: 'ตรวจพัฒนาการ' },
+  { key: 'mental', label: 'สุขภาพจิต', icon: IconHeart, activity: 'ตรวจสุขภาพจิต' },
   { key: 'vaccine', label: 'ฉีดวัคซีน', icon: IconSyringe, activity: 'ฉีดวัคซีน' },
 ]
 

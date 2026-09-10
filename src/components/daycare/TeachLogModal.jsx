@@ -1,17 +1,18 @@
 import { useState } from 'react'
 import { IconX, IconCalendar } from '../icons.jsx'
-import { TEACH_ACTIVITIES, TEACH_CLASSES } from '../../data/daycare.js'
+import MultiSelectField from '../MultiSelectField.jsx'
+import { TEACH_ACTIVITIES } from '../../data/daycare.js'
 
-export default function TeachLogModal({ initial, onCancel, onSave }) {
+export default function TeachLogModal({ initial, roomOptions, onCancel, onSave }) {
   const [dateIso, setDateIso] = useState(initial?.dateIso ?? '')
   const [activity, setActivity] = useState(initial?.activity ?? '')
-  const [className, setClassName] = useState(initial?.className ?? '')
+  const [classNames, setClassNames] = useState(initial?.classNames ?? [])
   const [teacher, setTeacher] = useState(initial?.teacher ?? '')
   const [note, setNote] = useState(initial?.note ?? '')
 
   function handleSave() {
-    if (!dateIso || !activity || !className || !teacher.trim()) return
-    onSave({ dateIso, activity, className, teacher: teacher.trim(), note: note.trim() })
+    if (!dateIso || !activity || classNames.length === 0 || !teacher.trim()) return
+    onSave({ dateIso, activity, classNames, teacher: teacher.trim(), note: note.trim() })
   }
 
   return (
@@ -34,11 +35,15 @@ export default function TeachLogModal({ initial, onCancel, onSave }) {
             {TEACH_ACTIVITIES.map((a) => <option key={a} value={a}>{a}</option>)}
           </select>
 
-          <label className="f-label">ชั้นเรียน</label>
-          <select className="f-input" style={{ marginBottom: 16 }} value={className} onChange={(e) => setClassName(e.target.value)}>
-            <option value="">เลือกชั้นเรียน</option>
-            {TEACH_CLASSES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
+          <label className="f-label">ชั้นเรียนที่ใช้</label>
+          <div style={{ marginBottom: 16 }}>
+            <MultiSelectField
+              options={roomOptions}
+              values={classNames}
+              onChange={setClassNames}
+              placeholder="เลือกชั้นเรียนที่ใช้"
+            />
+          </div>
 
           <label className="f-label">ผู้สอน</label>
           <input className="f-input" style={{ marginBottom: 16 }} placeholder="กรอกผู้สอน" value={teacher} onChange={(e) => setTeacher(e.target.value)} />

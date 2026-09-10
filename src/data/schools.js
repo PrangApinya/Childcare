@@ -652,8 +652,8 @@ export function generateDentalHistory(student) {
 export const DEVELOPMENT_RESULTS = ['ปกติ', 'สงสัยล่าช้า', 'ล่าช้า']
 
 // Deterministic mock "การตรวจพัฒนาการ" (DSPM) history (2 past visits, newest first) for the
-// student-profile tab (คทง5 ครั้งที่ 3 หน้า 5, ครั้งที่ 4 หน้า 4-5) — เฉพาะเด็กปฐมวัย, ประเมิน
-// 2 ครั้ง (ครั้งที่ 2 เฉพาะกรณีสงสัยล่าช้า) — self-contained like generateCheckupHistory above.
+// student-profile tab (คทง5 ครั้งที่ 3 หน้า 5, ครั้งที่ 4 หน้า 4-5) — เฉพาะเด็กปฐมวัย —
+// self-contained like generateCheckupHistory above.
 export function generateDevelopmentHistory(student) {
   const seed = student.seatNo
   return [0, 1].map((i) => {
@@ -662,7 +662,6 @@ export function generateDevelopmentHistory(student) {
     return {
       id: `${student.id || seed}-development-${i}`,
       recordedDateLabel: checkupDateTimeLabel(seed, i),
-      round: 1,
       result,
       referral: result === 'ล่าช้า' ? (s % 2 === 0 ? 'คลินิกกระตุ้นพัฒนาการ' : 'งานสุขภาพจิต') : '',
     }

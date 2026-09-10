@@ -53,16 +53,12 @@ function HistoryCard({ entry, showToast }) {
         <HistoryField label="น้ำหนัก (กก.)" value={entry.weightKg ? `${entry.weightKg} กก.` : '—'} />
         <HistoryField label="ส่วนสูง (ซม.)" value={entry.heightCm ? `${entry.heightCm} ซม.` : '—'} />
         <HistoryField label="ภาวะโภชนาการ" value={n?.weightForHeight} />
-        <HistoryField label="เหา" value={entry.lice} />
-
-        <HistoryField label="น้ำหนักตามเกณฑ์อายุ" value={n?.weightForAge} />
-        <HistoryField label="ส่วนสูงตามเกณฑ์อายุ" value={n?.heightForAge} />
         <HistoryField label="สายตา" value={entry.vision} />
-        <HistoryField label="การได้ยิน" value={entry.hearing} />
 
-        <HistoryField label="สรุปโภชนาการ" value={n?.tallProportionate ? 'สูงดีสมส่วน' : 'ยังไม่สูงดีสมส่วน'} />
+        <HistoryField label="เหา" value={entry.lice} />
+        <HistoryField label="การได้ยิน" value={entry.hearing} />
         {entry.anemiaEligible && <HistoryField label="ภาวะซีด" value={entry.anemiaResult} />}
-        <div style={{ gridColumn: entry.anemiaEligible ? 'span 2' : 'span 3' }}>
+        <div>
           <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>หมายเหตุ</div>
           <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
             {[entry.obesityAcanthosis && 'พบภาวะคอดำ', entry.obesitySnoring && 'พบการนอนกรน'].filter(Boolean).join(', ') || '-'}
@@ -122,7 +118,7 @@ export default function HealthCheckupTab({ history, onSave, showToast }) {
           <h3 style={{ marginLeft: 8 }}>บันทึกผลตรวจสุขภาพนักเรียน</h3>
         </div>
         <div className="card-bd">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 16, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 16 }}>
             <div>
               <label className="f-label">น้ำหนัก (กก.)</label>
               <input className="f-input" type="number" min="0" step="0.1" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} />
@@ -131,20 +127,11 @@ export default function HealthCheckupTab({ history, onSave, showToast }) {
               <label className="f-label">ส่วนสูง (ซม.)</label>
               <input className="f-input" type="number" min="0" step="0.1" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} />
             </div>
+            <HistoryField label="ภาวะโภชนาการ" value={nutrition?.weightForHeight} />
           </div>
 
-          {!nutrition ? (
+          {!nutrition && (
             <div style={{ color: 'var(--text-tertiary)', fontSize: 13 }}>กรอกน้ำหนักและส่วนสูงเพื่อให้ระบบประเมินภาวะโภชนาการโดยอัตโนมัติ</div>
-          ) : (
-            <>
-              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 10 }}>เกณฑ์ที่ใช้: {nutrition.method}</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 16 }}>
-                <HistoryField label="น้ำหนักตามเกณฑ์อายุ" value={nutrition.weightForAge} />
-                <HistoryField label="ส่วนสูงตามเกณฑ์อายุ" value={nutrition.heightForAge} />
-                <HistoryField label="น้ำหนักตามเกณฑ์ส่วนสูง" value={nutrition.weightForHeight} />
-                <HistoryField label="สรุป" value={nutrition.tallProportionate ? 'สูงดีสมส่วน' : 'ยังไม่สูงดีสมส่วน'} />
-              </div>
-            </>
           )}
         </div>
       </div>
